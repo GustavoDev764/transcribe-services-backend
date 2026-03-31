@@ -19,7 +19,7 @@ export class AdminJobService {
     const limit = query.limit ?? 20;
     const skip = (page - 1) * limit;
 
-    const where: any = {
+    const where: Prisma.TranscriptionJobWhereInput = {
       ...(query.status ? { status: query.status } : {}),
       ...(query.fileUrl ? { fileUrl: { contains: query.fileUrl } } : {}),
     };
@@ -80,11 +80,13 @@ export class AdminJobService {
   }
 
   async updateJobByManager(jobId: string, userId: string, dto: UpdateJobDto) {
-    const current = await this.db.transcriptionJob.findUnique({ where: { id: jobId } });
+    const current = await this.db.transcriptionJob.findUnique({
+      where: { id: jobId },
+    });
     if (!current) {
       throw new Error('Job não encontrado');
     }
-    const nextStatus = dto.status ?? (current.status as TranscriptionStatus);
+    const nextStatus = dto.status ?? current.status;
     const nextErrorMessage =
       dto.errorMessage === undefined ? current.errorMessage : dto.errorMessage;
     const nextResponses =
@@ -129,7 +131,7 @@ export class AdminJobService {
         data: {
           transcriptionJobId: jobId,
           userId,
-          previousStatus: current.status as TranscriptionStatus,
+          previousStatus: current.status,
           newStatus: nextStatus,
           previousResponses: previousResponsesValue,
           newResponses: newResponsesValue,

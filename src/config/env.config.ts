@@ -43,8 +43,14 @@ export function loadConfigEnv(): IEnvConfig {
     STORAGE_PATH: env('STORAGE_PATH', './storage'),
     MANAGER_EMAIL: env('MANAGER_EMAIL', ''),
     MANAGER_PASSWORD: env('MANAGER_PASSWORD', ''),
-    GOOGLE_TRANSLATE_CREDENTIALS_KEY: env('GOOGLE_TRANSLATE_CREDENTIALS_KEY', 'GOOGLE_TRANSLATE_CREDENTIALS_JSON'),
-    GOOGLE_TRANSLATE_BASE: env('GOOGLE_TRANSLATE_BASE', 'https://translation.googleapis.com/language/translate/v2'),
+    GOOGLE_TRANSLATE_CREDENTIALS_KEY: env(
+      'GOOGLE_TRANSLATE_CREDENTIALS_KEY',
+      'GOOGLE_TRANSLATE_CREDENTIALS_JSON',
+    ),
+    GOOGLE_TRANSLATE_BASE: env(
+      'GOOGLE_TRANSLATE_BASE',
+      'https://translation.googleapis.com/language/translate/v2',
+    ),
     GOOGLE_TRANSLATE_Q_BATCH_SIZE: Math.min(
       500,
       Math.max(1, envNumber('GOOGLE_TRANSLATE_Q_BATCH_SIZE', 400)),
@@ -53,7 +59,10 @@ export function loadConfigEnv(): IEnvConfig {
       20,
       Math.max(1, envNumber('GOOGLE_TRANSLATE_PARALLEL_REQUESTS', 5)),
     ),
-    GOOGLE_CLOUD_SCOPE: env('GOOGLE_CLOUD_SCOPE', 'https://www.googleapis.com/auth/cloud-platform'),
+    GOOGLE_CLOUD_SCOPE: env(
+      'GOOGLE_CLOUD_SCOPE',
+      'https://www.googleapis.com/auth/cloud-platform',
+    ),
     TRANSCRIBE_HOST: env('TRANSCRIBE_HOST', ''),
   };
 }

@@ -21,9 +21,7 @@ export class AdminUserService {
 
   async listUsers(query: ListUsersQueryDto) {
     const isActive =
-      query.isActive === undefined
-        ? undefined
-        : query.isActive === 'true';
+      query.isActive === undefined ? undefined : query.isActive === 'true';
 
     const { users, total } = await this.userRepository.findMany({
       page: query.page ?? 1,
@@ -127,8 +125,7 @@ export class AdminUserService {
       throw new NotFoundException('Usuário não encontrado');
     }
 
-    const newPassword =
-      dto.newPassword ?? this.generateRandomPassword();
+    const newPassword = dto.newPassword ?? this.generateRandomPassword();
 
     await this.authService.resetPassword(userId, newPassword);
 
@@ -145,7 +142,8 @@ export class AdminUserService {
     const bytes = crypto.randomBytes(length);
     let password = '';
     for (let i = 0; i < length; i++) {
-      password += chars[bytes[i]! % chars.length];
+      const n = bytes[i] ?? 0;
+      password += chars[n % chars.length];
     }
     return password;
   }

@@ -41,7 +41,15 @@ export class AdminAnalyticsService {
       case 'week': {
         const dayOfWeek = now.getDay();
         const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-        currentStart = new Date(now.getFullYear(), now.getMonth(), diff, 0, 0, 0, 0);
+        currentStart = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          diff,
+          0,
+          0,
+          0,
+          0,
+        );
         previousEnd = new Date(currentStart);
         previousEnd.setMilliseconds(-1);
         previousStart = new Date(previousEnd);
@@ -49,10 +57,26 @@ export class AdminAnalyticsService {
         break;
       }
       case 'month': {
-        currentStart = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
+        currentStart = new Date(
+          now.getFullYear(),
+          now.getMonth(),
+          1,
+          0,
+          0,
+          0,
+          0,
+        );
         previousEnd = new Date(currentStart);
         previousEnd.setMilliseconds(-1);
-        previousStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+        previousStart = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1,
+          1,
+          0,
+          0,
+          0,
+          0,
+        );
         break;
       }
       case 'year': {
@@ -67,7 +91,15 @@ export class AdminAnalyticsService {
         currentStart = d;
         previousEnd = new Date(d);
         previousEnd.setMilliseconds(-1);
-        previousStart = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+        previousStart = new Date(
+          now.getFullYear(),
+          now.getMonth() - 1,
+          1,
+          0,
+          0,
+          0,
+          0,
+        );
       }
     }
 
@@ -166,8 +198,8 @@ export class AdminAnalyticsService {
     };
   }
 
-  async getTokenUsageByUser(sort: TokenUsageSort) {
-    const _ = sort;
-    return { data: [] };
+  getTokenUsageByUser(sort: TokenUsageSort) {
+    void sort;
+    return Promise.resolve({ data: [] as unknown[] });
   }
 }
