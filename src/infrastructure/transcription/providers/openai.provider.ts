@@ -1,20 +1,33 @@
 import OpenAI from 'openai';
-import { AIProvider, TranscriptionInput, TranscriptionOutput, TranscriptionProviderError } from '@app/protocols/transcription/providers/ai-provider';
+import {
+  AIProvider,
+  TranscriptionInput,
+  TranscriptionOutput,
+  TranscriptionProviderError,
+} from '@app/protocols/transcription/providers/ai-provider';
 import { TranscriptionErrorCode } from '@app/domain/transcription/services/transcription-domain.service';
-import { HttpClient, HttpClientError } from '@app/infrastructure/http/http-client';
+import {
+  HttpClient,
+  HttpClientError,
+} from '@app/infrastructure/http/http-client';
 
 export class OpenAIProvider implements AIProvider {
   constructor(private readonly apiKey: string) {}
 
   async transcribe(input: TranscriptionInput): Promise<TranscriptionOutput> {
     const openai = new OpenAI({ apiKey: this.apiKey });
-    const buffer = input.fileBuffer ?? await this.downloadFile(input.fileUrl);
-    const fileInstance = this.buildFile(buffer, input.fileName || input.fileUrl);
+    const buffer = input.fileBuffer ?? (await this.downloadFile(input.fileUrl));
+    const fileInstance = this.buildFile(
+      buffer,
+      input.fileName || input.fileUrl,
+    );
 
     try {
-      const responseFormat = input.modelName.startsWith('gpt-4o') ? 'json' : 'verbose_json';
+      const responseFormat = input.modelName.startsWith('gpt-4o')
+        ? 'json'
+        : 'verbose_json';
       const response = await openai.audio.transcriptions.create({
-        file: fileInstance as any,
+        file: fileInstance,
         model: input.modelName,
         response_format: responseFormat,
         ...(responseFormat === 'verbose_json'
@@ -22,8 +35,12 @@ export class OpenAIProvider implements AIProvider {
           : {}),
       });
 
-      const text = (response as any).text || '';
-      const segments = (response as any).segments || [];
+      const payload = response as {
+        text?: string;
+        segments?: Array<{ start: number; end: number; text: string }>;
+      };
+      const text = payload.text ?? '';
+      const segments = payload.segments ?? [];
       const srtContent = segments.length
         ? this.segmentsToSrt(segments)
         : this.singleSegmentSrt(text);
@@ -44,18 +61,29 @@ export class OpenAIProvider implements AIProvider {
 
   private async downloadFile(url: string): Promise<Buffer> {
     try {
-      const res = await HttpClient.get<ArrayBuffer>(url, { responseType: 'arraybuffer' });
+      const res = await HttpClient.get<ArrayBuffer>(url, {
+        responseType: 'arraybuffer',
+      });
       return Buffer.from(res.data);
     } catch (e) {
       const err = e as HttpClientError;
       const status = err.status;
       if (status === 401 || status === 403) {
-        throw new TranscriptionProviderError('Sem permissão para acessar o arquivo', 'VALIDATION_ERROR');
+        throw new TranscriptionProviderError(
+          'Sem permissão para acessar o arquivo',
+          'VALIDATION_ERROR',
+        );
       }
       if (status === 404) {
-        throw new TranscriptionProviderError('Arquivo não encontrado', 'INVALID_AUDIO');
+        throw new TranscriptionProviderError(
+          'Arquivo não encontrado',
+          'INVALID_AUDIO',
+        );
       }
-      throw new TranscriptionProviderError(`Falha ao baixar arquivo (HTTP ${status})`, 'PROVIDER_UNAVAILABLE');
+      throw new TranscriptionProviderError(
+        `Falha ao baixar arquivo (HTTP ${status})`,
+        'PROVIDER_UNAVAILABLE',
+      );
     }
   }
 
@@ -65,7 +93,9 @@ export class OpenAIProvider implements AIProvider {
     return new File([blob], name);
   }
 
-  private segmentsToSrt(segments: Array<{ start: number; end: number; text: string }>) {
+  private segmentsToSrt(
+    segments: Array<{ start: number; end: number; text: string }>,
+  ) {
     return segments
       .map((seg, i) => {
         const start = this.formatSrtTime(seg.start);
@@ -93,7 +123,13 @@ export class OpenAIProvider implements AIProvider {
   }
 
   private mapErrorCode(err: unknown): TranscriptionErrorCode {
-    const status = (err as any)?.status;
+    const status =
+      err !== null &&
+      typeof err === 'object' &&
+      'status' in err &&
+      typeof (err as { status: unknown }).status === 'number'
+        ? (err as { status: number }).status
+        : undefined;
     if (status === 400) return 'VALIDATION_ERROR';
     if (status === 408) return 'TIMEOUT';
     if (status === 429) return 'RATE_LIMIT';

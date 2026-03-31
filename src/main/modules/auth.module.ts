@@ -25,7 +25,20 @@ import { ManagerGuard } from '@app/presentation/auth/guards/manager.guard';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, UserRepository, JwtStrategy, JwtAuthGuard, PermissionGuard, ManagerGuard],
-  exports: [AuthService, UserRepository, JwtAuthGuard, PermissionGuard, ManagerGuard],
+  providers: [
+    AuthService,
+    UserRepository,
+    JwtStrategy,
+    JwtAuthGuard,
+    PermissionGuard,
+    ManagerGuard,
+  ],
+  exports: [
+    AuthService,
+    UserRepository,
+    JwtAuthGuard,
+    PermissionGuard,
+    ManagerGuard,
+  ],
 })
 export class AuthModule {}

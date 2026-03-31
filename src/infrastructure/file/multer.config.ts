@@ -1,11 +1,16 @@
 import { memoryStorage } from 'multer';
+import type { Request } from 'express';
 
 export const multerConfig = {
   storage: memoryStorage(),
   limits: {
     fileSize: 10 * 1024 * 1024 * 1024, // até 10GB (Transcribe Services API)
   },
-  fileFilter: (_req: any, file: { mimetype: string }, cb: any) => {
+  fileFilter: (
+    _req: Request,
+    file: Express.Multer.File,
+    cb: (error: Error | null, acceptFile: boolean) => void,
+  ) => {
     const allowed = [
       'audio/mpeg',
       'audio/mp3',

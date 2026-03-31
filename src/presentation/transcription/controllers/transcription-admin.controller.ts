@@ -57,7 +57,10 @@ export class TranscriptionAdminController {
   }
 
   @Put('credentials/:id')
-  updateCredential(@Param('id') id: string, @Body() dto: Partial<CreateCredentialDto>) {
+  updateCredential(
+    @Param('id') id: string,
+    @Body() dto: Partial<CreateCredentialDto>,
+  ) {
     return this.adminService.updateCredential(id, dto);
   }
 

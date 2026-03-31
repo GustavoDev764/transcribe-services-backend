@@ -48,7 +48,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Post('me')
-  async me(@CurrentUser() user: UserEntity) {
+  me(@CurrentUser() user: UserEntity) {
     return {
       id: user.id,
       email: user.email,

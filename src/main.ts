@@ -17,11 +17,17 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const httpAdapter = app.getHttpAdapter().getInstance();
   httpAdapter.set('etag', false);
-  httpAdapter.use((_req: unknown, res: { setHeader: (k: string, v: string) => void }, next: () => void) => {
-    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
-    res.setHeader('Pragma', 'no-cache');
-    next();
-  });
+  httpAdapter.use(
+    (
+      _req: unknown,
+      res: { setHeader: (k: string, v: string) => void },
+      next: () => void,
+    ) => {
+      res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      next();
+    },
+  );
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -39,4 +45,4 @@ async function bootstrap() {
   app.useStaticAssets(join(__dirname, '..', 'public'));
   await app.listen(configEnv.HOST_PORT);
 }
-bootstrap();
+void bootstrap();

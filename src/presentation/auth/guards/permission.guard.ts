@@ -5,7 +5,7 @@ import {
   Injectable,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { UserEntity } from '@app/domain/auth/entities/user.entity';
+import type { UserEntity } from '@app/domain/auth/entities/user.entity';
 import { PERMISSIONS_KEY } from '@app/presentation/auth/decorators/require-permission.decorator';
 
 @Injectable()
@@ -20,7 +20,7 @@ export class PermissionGuard implements CanActivate {
 
     if (!requiredPermissions?.length) return true;
 
-    const { user } = context.switchToHttp().getRequest() as { user: UserEntity };
+    const { user } = context.switchToHttp().getRequest<{ user?: UserEntity }>();
     if (!user) return false;
 
     const hasAll = requiredPermissions.every((p) => user.hasPermission(p));

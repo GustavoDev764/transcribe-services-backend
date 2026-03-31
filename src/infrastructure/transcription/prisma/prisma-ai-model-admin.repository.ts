@@ -9,9 +9,7 @@ import {
 
 @Injectable()
 export class PrismaAiModelAdminRepository implements AiModelAdminRepository {
-  constructor(
-    @Inject(DATABASE_CLIENT) private readonly db: DatabaseClient,
-  ) {}
+  constructor(@Inject(DATABASE_CLIENT) private readonly db: DatabaseClient) {}
 
   async list(): Promise<Array<AiModelRecord & { provider: ProviderRecord }>> {
     const items = await this.db.aiModel.findMany({

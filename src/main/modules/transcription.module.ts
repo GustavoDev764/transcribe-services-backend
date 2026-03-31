@@ -18,9 +18,7 @@ import { PrismaProviderAdminRepository } from '@app/infrastructure/transcription
 import { PrismaProviderCredentialAdminRepository } from '@app/infrastructure/transcription/prisma/prisma-provider-credential-admin.repository';
 import { PrismaAiModelAdminRepository } from '@app/infrastructure/transcription/prisma/prisma-ai-model-admin.repository';
 import { TRANSCRIPTION_TOKENS } from '@app/domain/transcription/constants/transcription.tokens';
-import {
-  TRANSCRIPTION_ADMIN_TOKENS,
-} from '@app/data/transcription/use-cases/transcription-admin.service';
+import { TRANSCRIPTION_ADMIN_TOKENS } from '@app/data/transcription/use-cases/transcription-admin.service';
 import { FileModule } from '@app/main/modules/file.module';
 
 @Module({
@@ -40,13 +38,34 @@ import { FileModule } from '@app/main/modules/file.module';
     TranscriptionDomainService,
     ProviderFactory,
     TranscriptionProcessor,
-    { provide: TRANSCRIPTION_TOKENS.JobRepository, useClass: PrismaTranscriptionJobRepository },
-    { provide: TRANSCRIPTION_TOKENS.ModelRepository, useClass: PrismaAiModelRepository },
-    { provide: TRANSCRIPTION_TOKENS.CredentialRepository, useClass: PrismaProviderCredentialRepository },
-    { provide: TRANSCRIPTION_TOKENS.UsageLogRepository, useClass: PrismaUsageLogRepository },
-    { provide: TRANSCRIPTION_ADMIN_TOKENS.ProviderRepository, useClass: PrismaProviderAdminRepository },
-    { provide: TRANSCRIPTION_ADMIN_TOKENS.ProviderCredentialRepository, useClass: PrismaProviderCredentialAdminRepository },
-    { provide: TRANSCRIPTION_ADMIN_TOKENS.AiModelRepository, useClass: PrismaAiModelAdminRepository },
+    {
+      provide: TRANSCRIPTION_TOKENS.JobRepository,
+      useClass: PrismaTranscriptionJobRepository,
+    },
+    {
+      provide: TRANSCRIPTION_TOKENS.ModelRepository,
+      useClass: PrismaAiModelRepository,
+    },
+    {
+      provide: TRANSCRIPTION_TOKENS.CredentialRepository,
+      useClass: PrismaProviderCredentialRepository,
+    },
+    {
+      provide: TRANSCRIPTION_TOKENS.UsageLogRepository,
+      useClass: PrismaUsageLogRepository,
+    },
+    {
+      provide: TRANSCRIPTION_ADMIN_TOKENS.ProviderRepository,
+      useClass: PrismaProviderAdminRepository,
+    },
+    {
+      provide: TRANSCRIPTION_ADMIN_TOKENS.ProviderCredentialRepository,
+      useClass: PrismaProviderCredentialAdminRepository,
+    },
+    {
+      provide: TRANSCRIPTION_ADMIN_TOKENS.AiModelRepository,
+      useClass: PrismaAiModelAdminRepository,
+    },
   ],
   exports: [],
 })

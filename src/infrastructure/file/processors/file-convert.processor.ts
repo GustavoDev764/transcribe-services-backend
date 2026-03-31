@@ -4,9 +4,7 @@ import { FileService } from '@app/data/file/use-cases/file.service';
 
 @Processor('file-convert', { concurrency: 2 })
 export class FileConvertProcessor extends WorkerHost {
-  constructor(
-    private readonly fileService: FileService,
-  ) {
+  constructor(private readonly fileService: FileService) {
     super();
   }
 

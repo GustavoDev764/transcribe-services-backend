@@ -35,7 +35,10 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async createAccount(dto: CreateAccountDto, profile: UserProfile = 'CLIENT'): Promise<AuthResponse> {
+  async createAccount(
+    dto: CreateAccountDto,
+    profile: UserProfile = 'CLIENT',
+  ): Promise<AuthResponse> {
     const existing = await this.userRepository.findByEmail(dto.email);
     if (existing) {
       throw new ConflictException('Email já cadastrado');
@@ -61,7 +64,10 @@ export class AuthService {
       throw new UnauthorizedException('Conta desativada');
     }
 
-    const valid = await this.userRepository.validatePassword(user, dto.password);
+    const valid = await this.userRepository.validatePassword(
+      user,
+      dto.password,
+    );
     if (!valid) {
       throw new UnauthorizedException('Credenciais inválidas');
     }

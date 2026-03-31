@@ -32,10 +32,7 @@ export class FolderController {
   }
 
   @Get()
-  findAll(
-    @CurrentUser() user: UserEntity,
-    @Query() query: PaginationQueryDto,
-  ) {
+  findAll(@CurrentUser() user: UserEntity, @Query() query: PaginationQueryDto) {
     return this.folderService.findAllByUser(
       user.id,
       query.page ?? 1,

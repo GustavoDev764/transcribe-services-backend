@@ -33,9 +33,7 @@ import { UpdateSegmentDto } from '@app/presentation/file/requests/update-segment
 @Controller('files')
 @UseGuards(JwtAuthGuard, PermissionGuard)
 export class FileController {
-  constructor(
-    private readonly fileService: FileService,
-  ) {}
+  constructor(private readonly fileService: FileService) {}
 
   private normalizeMode(mode?: string): TranscriptionMode {
     if (!mode) return 'GOLFINHO';
@@ -95,7 +93,8 @@ export class FileController {
   @UseInterceptors(FileInterceptor('file', multerConfig))
   async upload(
     @CurrentUser() user: UserEntity,
-    @UploadedFile() file: { originalname: string; buffer: Buffer; mimetype: string },
+    @UploadedFile()
+    file: { originalname: string; buffer: Buffer; mimetype: string },
     @Query('folderId') folderId?: string,
     @Query('mode') mode?: string,
     @Query('language') language?: string,
@@ -117,7 +116,8 @@ export class FileController {
   @UseInterceptors(FilesInterceptor('files', 10, multerConfig))
   async uploadMultiple(
     @CurrentUser() user: UserEntity,
-    @UploadedFiles() files: Array<{ originalname: string; buffer: Buffer; mimetype: string }>,
+    @UploadedFiles()
+    files: Array<{ originalname: string; buffer: Buffer; mimetype: string }>,
     @Query('folderId') folderId?: string,
     @Query('mode') mode?: string,
     @Query('language') language?: string,
@@ -212,7 +212,12 @@ export class FileController {
   update(
     @Param('id') id: string,
     @CurrentUser() user: UserEntity,
-    @Body() body: { originalName?: string; folderId?: string | null; isFavorite?: boolean },
+    @Body()
+    body: {
+      originalName?: string;
+      folderId?: string | null;
+      isFavorite?: boolean;
+    },
   ) {
     return this.fileService.updateMetadata(id, user.id, {
       originalName: body.originalName,
@@ -228,7 +233,8 @@ export class FileController {
     @CurrentUser() user: UserEntity,
   ): Promise<StreamableFile> {
     const file = await this.fileService.findOne(id, user.id);
-    if (!file.transcriptionText) throw new NotFoundException('SRT ainda não gerado');
+    if (!file.transcriptionText)
+      throw new NotFoundException('SRT ainda não gerado');
     const stream = Readable.from([file.transcriptionText]);
     return new StreamableFile(stream, {
       type: 'text/plain',

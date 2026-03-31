@@ -39,7 +39,7 @@ jobs:
         run: npx prisma generate
 
       - name: ESLint (sem --fix)
-        run: npx eslint "{src,apps,libs,test}/**/*.ts" --max-warnings 0
+        run: npm run lint:check
 
       - name: Build
         run: npm run build

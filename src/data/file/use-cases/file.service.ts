@@ -19,6 +19,12 @@ import { v4 as uuidv4 } from 'uuid';
 import ffmpeg from 'fluent-ffmpeg';
 import ffmpegPath from 'ffmpeg-static';
 
+type FileConvertJobData = { fileId: string; enqueueTranscription?: boolean };
+type TranscriptionQueueJobData = {
+  jobId?: string;
+  transcriptionJobId?: string;
+};
+
 @Injectable()
 export class FileService {
   private readonly logger = new Logger(FileService.name);
@@ -27,8 +33,10 @@ export class FileService {
   constructor(
     @Inject(APP_CONFIG) private readonly config: IEnvConfig,
     @Inject(DATABASE_CLIENT) private readonly db: DatabaseClient,
-    @InjectQueue('file-convert') private readonly convertQueue: Queue,
-    @InjectQueue('transcription') private readonly transcriptionQueue: Queue,
+    @InjectQueue('file-convert')
+    private readonly convertQueue: Queue<FileConvertJobData>,
+    @InjectQueue('transcription')
+    private readonly transcriptionQueue: Queue<TranscriptionQueueJobData>,
   ) {
     if (ffmpegPath) {
       ffmpeg.setFfmpegPath(ffmpegPath);
@@ -94,7 +102,9 @@ export class FileService {
         .audioQuality(2)
         .format('mp3')
         .on('end', () => resolve())
-        .on('error', (err) => reject(err))
+        .on('error', (err: Error) =>
+          reject(err instanceof Error ? err : new Error(String(err))),
+        )
         .save(outputPath);
     });
   }
@@ -247,7 +257,9 @@ export class FileService {
   }
 
   /** Progresso 0–99 vindo do payload salvo em transcription_jobs.responses (ex.: whisper-api). */
-  private parseTranscriptionProgressFromResponses(responses: unknown): number | null {
+  private parseTranscriptionProgressFromResponses(
+    responses: unknown,
+  ): number | null {
     if (!responses || typeof responses !== 'object') return null;
     const obj = responses as Record<string, unknown>;
     const raw = obj.progress;
@@ -276,7 +288,10 @@ export class FileService {
     transcribeModelByFileId: Map<string, 'tiny' | 'base' | 'small'>;
   }> {
     if (!fileIds.length) {
-      return { progressByFileId: new Map(), transcribeModelByFileId: new Map() };
+      return {
+        progressByFileId: new Map(),
+        transcribeModelByFileId: new Map(),
+      };
     }
     const jobs = await this.db.transcriptionJob.findMany({
       where: { fileId: { in: fileIds } },
@@ -307,7 +322,10 @@ export class FileService {
       }
     }
     const progressByFileId = new Map<string, number>();
-    const transcribeModelByFileId = new Map<string, 'tiny' | 'base' | 'small'>();
+    const transcribeModelByFileId = new Map<
+      string,
+      'tiny' | 'base' | 'small'
+    >();
     for (const [fileId, row] of latestByFileId) {
       const p = this.parseTranscriptionProgressFromResponses(row.responses);
       if (p !== null) progressByFileId.set(fileId, p);
@@ -329,9 +347,7 @@ export class FileService {
         f.duration === null &&
         f.transcriptionStatus === FileTranscriptionStatus.SUCCESS,
     );
-    await Promise.all(
-      eligible.map((f) => this.enqueueConversion(f.id)),
-    );
+    await Promise.all(eligible.map((f) => this.enqueueConversion(f.id)));
   }
 
   async findRecentByUser(userId: string, page = 1, limit = 20) {
@@ -422,7 +438,8 @@ export class FileService {
     ]);
     await this.enqueueDurationBackfillForCompletedFiles(files);
     const fileIds = files.map((f) => f.id);
-    const { transcribeModelByFileId } = await this.buildLatestJobMetaByFileIds(fileIds);
+    const { transcribeModelByFileId } =
+      await this.buildLatestJobMetaByFileIds(fileIds);
     return {
       data: files.map((f) => {
         const transcribeModel = transcribeModelByFileId.get(f.id);
@@ -579,7 +596,11 @@ export class FileService {
   async updateMetadata(
     id: string,
     userId: string,
-    data: { originalName?: string; folderId?: string | null; isFavorite?: boolean },
+    data: {
+      originalName?: string;
+      folderId?: string | null;
+      isFavorite?: boolean;
+    },
   ) {
     await this.findOne(id, userId);
     return this.db.file.update({
@@ -634,7 +655,9 @@ export class FileService {
           duration: f.duration,
           mode: f.mode,
           transcriptionStatus: f.transcriptionStatus,
-          ...(transcriptionProgress !== undefined ? { transcriptionProgress } : {}),
+          ...(transcriptionProgress !== undefined
+            ? { transcriptionProgress }
+            : {}),
           ...(transcribeModel !== undefined ? { transcribeModel } : {}),
         };
       }),

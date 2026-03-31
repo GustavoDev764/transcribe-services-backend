@@ -31,7 +31,10 @@ export interface AiModelRecord {
 export interface ProviderAdminRepository {
   list(): Promise<ProviderRecord[]>;
   create(data: { name: string; isActive?: boolean }): Promise<ProviderRecord>;
-  update(id: string, data: { name?: string; isActive?: boolean }): Promise<ProviderRecord>;
+  update(
+    id: string,
+    data: { name?: string; isActive?: boolean },
+  ): Promise<ProviderRecord>;
   delete(id: string): Promise<void>;
   deactivateAll(): Promise<void>;
   deactivateAllExcept(id: string): Promise<void>;
@@ -48,7 +51,12 @@ export interface ProviderCredentialAdminRepository {
   }): Promise<ProviderCredentialRecord>;
   update(
     id: string,
-    data: { name?: string; apiKey?: string; isActive?: boolean; priority?: number },
+    data: {
+      name?: string;
+      apiKey?: string;
+      isActive?: boolean;
+      priority?: number;
+    },
   ): Promise<ProviderCredentialRecord>;
   delete(id: string): Promise<void>;
 }

@@ -2,7 +2,10 @@ import { Injectable, Inject } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { DATABASE_CLIENT } from '@app/protocols/database/database-client.interface';
 import type { DatabaseClient } from '@app/infrastructure/database/database.types';
-import { TranscriptionJobRecord, TranscriptionJobRepository } from '@app/protocols/transcription/repositories/transcription-job.repository';
+import {
+  TranscriptionJobRecord,
+  TranscriptionJobRepository,
+} from '@app/protocols/transcription/repositories/transcription-job.repository';
 import { TranscriptionStatus } from '@app/domain/transcription/value-objects/transcription-status';
 import { ProviderAttempt } from '@app/domain/transcription/entities/transcription-job.entity';
 
@@ -83,7 +86,9 @@ export class PrismaTranscriptionJobRepository implements TranscriptionJobReposit
         fileId: { in: fileIds },
         provider: 'TRANSCRIBE_SERVICES',
         externalJobId: { not: null },
-        status: { in: [TranscriptionStatus.PENDING, TranscriptionStatus.PROCESSING] },
+        status: {
+          in: [TranscriptionStatus.PENDING, TranscriptionStatus.PROCESSING],
+        },
         OR: [
           { lastStatusCheckAt: null },
           { lastStatusCheckAt: { lte: minLastCheckBefore } },
@@ -99,7 +104,7 @@ export class PrismaTranscriptionJobRepository implements TranscriptionJobReposit
     status: TranscriptionStatus,
     data?: {
       providerAttempts?: ProviderAttempt[];
-      responses?: unknown | null;
+      responses?: unknown;
       resultUrl?: string | null;
       resultText?: string | null;
       errorMessage?: string | null;

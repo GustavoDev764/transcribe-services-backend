@@ -10,7 +10,8 @@ import { DATABASE_CLIENT } from '@app/protocols/database/database-client.interfa
 import type { DatabaseClient } from '@app/infrastructure/database/database.types';
 
 const OPENAI_MAX_BYTES = 25 * 1024 * 1024;
-const AUDIO_MAX_MB_MESSAGE = 'O arquivo do tipo áudio (.mp3) deve ter no máximo 25MB.';
+const AUDIO_MAX_MB_MESSAGE =
+  'O arquivo do tipo áudio (.mp3) deve ter no máximo 25MB.';
 
 @Injectable()
 export class CreateTranscriptionUseCase {
@@ -28,26 +29,29 @@ export class CreateTranscriptionUseCase {
     fileId: string;
     preferredModel?: string | null;
   }) {
-    const active = await this.db.provider.findMany({ where: { isActive: true } });
+    const active = await this.db.provider.findMany({
+      where: { isActive: true },
+    });
     if (active.length === 0) {
       throw new BadRequestException('Nenhum provedor de transcrição ativo.');
     }
     if (active.length > 1) {
-      throw new BadRequestException('Apenas um provedor de transcrição pode estar ativo.');
+      throw new BadRequestException(
+        'Apenas um provedor de transcrição pode estar ativo.',
+      );
     }
 
     const providerName = active[0].name;
-    const sizeBytes = await this.getFileBufferUseCase.getFileSizeBytes(input.fileId);
+    const sizeBytes = await this.getFileBufferUseCase.getFileSizeBytes(
+      input.fileId,
+    );
 
     if (providerName === ProviderName.OPENAI && sizeBytes > OPENAI_MAX_BYTES) {
       throw new BadRequestException(AUDIO_MAX_MB_MESSAGE);
     }
 
     const rawPreferred = input.preferredModel?.trim();
-    if (
-      rawPreferred &&
-      providerName !== ProviderName.TRANSCRIBE_SERVICES
-    ) {
+    if (rawPreferred && providerName !== ProviderName.TRANSCRIBE_SERVICES) {
       throw new BadRequestException(
         'O parâmetro transcribe_model só é permitido quando o provider ativo é Transcribe Services.',
       );
@@ -57,7 +61,9 @@ export class CreateTranscriptionUseCase {
     if (providerName === ProviderName.TRANSCRIBE_SERVICES) {
       preferredModel = rawPreferred || 'small';
       if (!['tiny', 'base', 'small'].includes(preferredModel)) {
-        throw new BadRequestException('Modelo de transcrição inválido. Use tiny, base ou small.');
+        throw new BadRequestException(
+          'Modelo de transcrição inválido. Use tiny, base ou small.',
+        );
       }
     }
 

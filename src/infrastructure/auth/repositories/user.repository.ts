@@ -4,7 +4,7 @@ import type { DatabaseClient } from '@app/infrastructure/database/database.types
 import { UserProfile } from '@prisma/client';
 import { UserEntity } from '@app/domain/auth/entities/user.entity';
 import { PROFILE_PERMISSIONS } from '@app/domain/constants/permissions.constants';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 
 @Injectable()
 export class UserRepository {
@@ -32,7 +32,8 @@ export class UserRepository {
   }): Promise<UserEntity> {
     const passwordHash = await bcrypt.hash(data.password, 10);
     const permissions =
-      PROFILE_PERMISSIONS[data.profile || 'CLIENT'] || PROFILE_PERMISSIONS.CLIENT;
+      PROFILE_PERMISSIONS[data.profile || 'CLIENT'] ||
+      PROFILE_PERMISSIONS.CLIENT;
 
     const user = await this.db.user.create({
       data: {
@@ -71,7 +72,8 @@ export class UserRepository {
       updateData.permissions =
         PROFILE_PERMISSIONS[data.profile] || PROFILE_PERMISSIONS.CLIENT;
     }
-    if (data.permissions !== undefined) updateData.permissions = data.permissions;
+    if (data.permissions !== undefined)
+      updateData.permissions = data.permissions;
     if (data.isActive !== undefined) updateData.isActive = data.isActive;
 
     const user = await this.db.user.update({

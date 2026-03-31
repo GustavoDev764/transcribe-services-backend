@@ -14,4 +14,3 @@ export class UpdateJobDto {
   @IsString()
   errorMessage?: string | null;
 }
-

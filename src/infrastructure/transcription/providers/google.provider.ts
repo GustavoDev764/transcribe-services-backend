@@ -1,19 +1,28 @@
 import speech from '@google-cloud/speech';
-import { AIProvider, TranscriptionInput, TranscriptionOutput, TranscriptionProviderError } from '@app/protocols/transcription/providers/ai-provider';
+import {
+  AIProvider,
+  TranscriptionInput,
+  TranscriptionOutput,
+  TranscriptionProviderError,
+} from '@app/protocols/transcription/providers/ai-provider';
 import { TranscriptionErrorCode } from '@app/domain/transcription/services/transcription-domain.service';
-import { HttpClient, HttpClientError } from '@app/infrastructure/http/http-client';
+import {
+  HttpClient,
+  HttpClientError,
+} from '@app/infrastructure/http/http-client';
 
 export class GoogleProvider implements AIProvider {
   async transcribe(input: TranscriptionInput): Promise<TranscriptionOutput> {
     try {
       const client = new speech.SpeechClient();
-      const buffer = input.fileBuffer ?? await this.downloadFile(input.fileUrl);
+      const buffer =
+        input.fileBuffer ?? (await this.downloadFile(input.fileUrl));
       const audio = {
         content: buffer.toString('base64'),
       };
 
-      const config: any = {
-        encoding: 'MP3',
+      const config = {
+        encoding: 'MP3' as const,
         sampleRateHertz: 16000,
         languageCode: input.language || 'pt-BR',
         model: input.modelName || 'default',
@@ -21,17 +30,22 @@ export class GoogleProvider implements AIProvider {
       };
 
       const [response] = await client.recognize({ audio, config });
-      const transcription = response.results
-        ?.map((r) => r.alternatives?.[0]?.transcript)
-        .join('\n') || '';
+      const transcription =
+        response.results
+          ?.map((r) => r.alternatives?.[0]?.transcript)
+          .join('\n') || '';
 
       const words: Array<{ word: string; start: number; end: number }> = [];
       for (const result of response.results || []) {
         const alternative = result.alternatives?.[0];
         if (!alternative?.words) continue;
         for (const word of alternative.words) {
-          const start = Number(word.startTime?.seconds || 0) + Number(word.startTime?.nanos || 0) / 1e9;
-          const end = Number(word.endTime?.seconds || 0) + Number(word.endTime?.nanos || 0) / 1e9;
+          const start =
+            Number(word.startTime?.seconds || 0) +
+            Number(word.startTime?.nanos || 0) / 1e9;
+          const end =
+            Number(word.endTime?.seconds || 0) +
+            Number(word.endTime?.nanos || 0) / 1e9;
           words.push({ word: word.word || '', start, end });
         }
       }
@@ -53,22 +67,35 @@ export class GoogleProvider implements AIProvider {
 
   private async downloadFile(url: string): Promise<Buffer> {
     try {
-      const res = await HttpClient.get<ArrayBuffer>(url, { responseType: 'arraybuffer' });
+      const res = await HttpClient.get<ArrayBuffer>(url, {
+        responseType: 'arraybuffer',
+      });
       return Buffer.from(res.data);
     } catch (e) {
       const err = e as HttpClientError;
       const status = err.status;
       if (status === 401 || status === 403) {
-        throw new TranscriptionProviderError('Sem permissão para acessar o arquivo', 'VALIDATION_ERROR');
+        throw new TranscriptionProviderError(
+          'Sem permissão para acessar o arquivo',
+          'VALIDATION_ERROR',
+        );
       }
       if (status === 404) {
-        throw new TranscriptionProviderError('Arquivo não encontrado', 'INVALID_AUDIO');
+        throw new TranscriptionProviderError(
+          'Arquivo não encontrado',
+          'INVALID_AUDIO',
+        );
       }
-      throw new TranscriptionProviderError(`Falha ao baixar arquivo (HTTP ${status})`, 'PROVIDER_UNAVAILABLE');
+      throw new TranscriptionProviderError(
+        `Falha ao baixar arquivo (HTTP ${status})`,
+        'PROVIDER_UNAVAILABLE',
+      );
     }
   }
 
-  private wordsToSrtSegments(words: Array<{ word: string; start: number; end: number }>): string {
+  private wordsToSrtSegments(
+    words: Array<{ word: string; start: number; end: number }>,
+  ): string {
     const segmentDuration = 5;
     const segments: Array<{ start: number; end: number; text: string }> = [];
     let current: { start: number; end: number; text: string[] } | null = null;
@@ -110,7 +137,7 @@ export class GoogleProvider implements AIProvider {
   }
 
   private mapErrorCode(err: unknown): TranscriptionErrorCode {
-    const message = (err as any)?.message || '';
+    const message = err instanceof Error ? err.message : String(err);
     if (message.includes('PERMISSION_DENIED')) return 'VALIDATION_ERROR';
     if (message.includes('RESOURCE_EXHAUSTED')) return 'RATE_LIMIT';
     return 'UNKNOWN';

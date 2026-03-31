@@ -3,7 +3,6 @@ import { APP_CONFIG } from '@app/config';
 import type { IEnvConfig } from '@app/config/env.interface';
 import { DATABASE_CLIENT } from '@app/protocols/database/database-client.interface';
 import type { DatabaseClient } from '@app/infrastructure/database/database.types';
-import { UserEntity } from '@app/domain/auth/entities/user.entity';
 import { CreateFolderDto } from '@app/presentation/folder/requests/create-folder.dto';
 import { UpdateFolderDto } from '@app/presentation/folder/requests/update-folder.dto';
 import * as path from 'path';
@@ -84,7 +83,9 @@ export class FolderService {
       where: { folderId: id, userId },
       select: { id: true, storageExt: true },
     });
-    await Promise.all(files.map((f) => this.deleteStorageFile(f.id, f.storageExt)));
+    await Promise.all(
+      files.map((f) => this.deleteStorageFile(f.id, f.storageExt)),
+    );
     await this.db.file.deleteMany({ where: { folderId: id, userId } });
     return this.db.folder.delete({ where: { id } });
   }

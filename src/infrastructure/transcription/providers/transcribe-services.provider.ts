@@ -6,7 +6,10 @@ import {
   TranscriptionOutput,
   TranscriptionProviderError,
 } from '@app/protocols/transcription/providers/ai-provider';
-import { HttpClient, HttpClientError } from '@app/infrastructure/http/http-client';
+import {
+  HttpClient,
+  HttpClientError,
+} from '@app/infrastructure/http/http-client';
 
 const POLL_MS = 2000;
 const MAX_POLL_ATTEMPTS = 5400;
@@ -57,10 +60,15 @@ export class TranscribeServicesProvider implements AIProvider {
       await sleep(POLL_MS);
     }
 
-    throw new TranscriptionProviderError('Timeout aguardando transcrição externa', 'TIMEOUT');
+    throw new TranscriptionProviderError(
+      'Timeout aguardando transcrição externa',
+      'TIMEOUT',
+    );
   }
 
-  async startExternalJob(input: TranscriptionInput): Promise<ExternalTranscriptionStartOutput> {
+  async startExternalJob(
+    input: TranscriptionInput,
+  ): Promise<ExternalTranscriptionStartOutput> {
     const buffer = input.fileBuffer ?? (await this.downloadFile(input.fileUrl));
     const fileName = input.fileName || 'audio.mp3';
     const model = input.modelName || 'small';
@@ -70,16 +78,19 @@ export class TranscribeServicesProvider implements AIProvider {
     form.append('model', model);
 
     try {
-      const uploadRes = await HttpClient.post<{ job_id?: string; status?: string }>(
-        this.url('/upload'),
-        {
-          data: form,
-          headers: this.headers(),
-        },
-      );
+      const uploadRes = await HttpClient.post<{
+        job_id?: string;
+        status?: string;
+      }>(this.url('/upload'), {
+        data: form,
+        headers: this.headers(),
+      });
       const payload = uploadRes.data;
       if (!payload.job_id) {
-        throw new TranscriptionProviderError('job_id ausente na resposta do upload', 'VALIDATION_ERROR');
+        throw new TranscriptionProviderError(
+          'job_id ausente na resposta do upload',
+          'VALIDATION_ERROR',
+        );
       }
 
       const st = (payload.status || 'processing').toLowerCase();
@@ -93,7 +104,9 @@ export class TranscribeServicesProvider implements AIProvider {
       const err = e as HttpClientError;
       const status = err.status;
       const text =
-        typeof err.data === 'string' ? err.data : JSON.stringify(err.data ?? '');
+        typeof err.data === 'string'
+          ? err.data
+          : JSON.stringify(err.data ?? '');
       throw new TranscriptionProviderError(
         `Upload Transcribe Services falhou (${status ?? 'sem status'}): ${text.slice(0, 500)}`,
         status && status >= 500 ? 'PROVIDER_UNAVAILABLE' : 'VALIDATION_ERROR',
@@ -101,7 +114,9 @@ export class TranscribeServicesProvider implements AIProvider {
     }
   }
 
-  async fetchExternalJobStatus(externalJobId: string): Promise<ExternalTranscriptionStatusOutput> {
+  async fetchExternalJobStatus(
+    externalJobId: string,
+  ): Promise<ExternalTranscriptionStatusOutput> {
     try {
       const jobRes = await HttpClient.get<{
         status?: string;
@@ -113,35 +128,45 @@ export class TranscribeServicesProvider implements AIProvider {
         headers: this.headers(),
       });
       const job = jobRes.data;
-    const st = (job.status || '').toLowerCase();
-    if (st === 'failed' || st === 'error') {
+      const st = (job.status || '').toLowerCase();
+      if (st === 'failed' || st === 'error') {
+        return {
+          status: 'failed',
+          rawResponse: JSON.parse(JSON.stringify(job)),
+          errorMessage: job.error_message || null,
+        };
+      }
+      if (st === 'completed' || st === 'done') {
+        const text = job.text_content ?? '';
+        const segments = job.segments ?? [];
+        return {
+          status: 'completed',
+          text,
+          srtContent: segments.length
+            ? this.segmentsToSrt(segments)
+            : this.singleSegmentSrt(text),
+          language: job.language,
+          rawResponse: JSON.parse(JSON.stringify(job)),
+        };
+      }
+      if (st === 'queued' || st === 'pending') {
+        return {
+          status: 'queued',
+          rawResponse: JSON.parse(JSON.stringify(job)),
+        };
+      }
       return {
-        status: 'failed',
-        rawResponse: JSON.parse(JSON.stringify(job)),
-        errorMessage: job.error_message || null,
-      };
-    }
-    if (st === 'completed' || st === 'done') {
-      const text = job.text_content ?? '';
-      const segments = job.segments ?? [];
-      return {
-        status: 'completed',
-        text,
-        srtContent: segments.length ? this.segmentsToSrt(segments) : this.singleSegmentSrt(text),
-        language: job.language,
+        status: 'processing',
         rawResponse: JSON.parse(JSON.stringify(job)),
       };
-    }
-    if (st === 'queued' || st === 'pending') {
-      return { status: 'queued', rawResponse: JSON.parse(JSON.stringify(job)) };
-    }
-    return { status: 'processing', rawResponse: JSON.parse(JSON.stringify(job)) };
     } catch (e) {
       if (e instanceof TranscriptionProviderError) throw e;
       const err = e as HttpClientError;
       const status = err.status;
       const text =
-        typeof err.data === 'string' ? err.data : JSON.stringify(err.data ?? '');
+        typeof err.data === 'string'
+          ? err.data
+          : JSON.stringify(err.data ?? '');
       throw new TranscriptionProviderError(
         `Consulta job falhou (${status ?? 'sem status'}): ${text.slice(0, 500)}`,
         status && status >= 500 ? 'PROVIDER_UNAVAILABLE' : 'VALIDATION_ERROR',
@@ -151,22 +176,35 @@ export class TranscribeServicesProvider implements AIProvider {
 
   private async downloadFile(url: string): Promise<Buffer> {
     try {
-      const res = await HttpClient.get<ArrayBuffer>(url, { responseType: 'arraybuffer' });
+      const res = await HttpClient.get<ArrayBuffer>(url, {
+        responseType: 'arraybuffer',
+      });
       return Buffer.from(res.data);
     } catch (e) {
       const err = e as HttpClientError;
       const status = err.status;
       if (status === 401 || status === 403) {
-        throw new TranscriptionProviderError('Sem permissão para acessar o arquivo', 'VALIDATION_ERROR');
+        throw new TranscriptionProviderError(
+          'Sem permissão para acessar o arquivo',
+          'VALIDATION_ERROR',
+        );
       }
       if (status === 404) {
-        throw new TranscriptionProviderError('Arquivo não encontrado', 'INVALID_AUDIO');
+        throw new TranscriptionProviderError(
+          'Arquivo não encontrado',
+          'INVALID_AUDIO',
+        );
       }
-      throw new TranscriptionProviderError(`Falha ao baixar arquivo (HTTP ${status})`, 'PROVIDER_UNAVAILABLE');
+      throw new TranscriptionProviderError(
+        `Falha ao baixar arquivo (HTTP ${status})`,
+        'PROVIDER_UNAVAILABLE',
+      );
     }
   }
 
-  private segmentsToSrt(segments: Array<{ start: number; end: number; text: string }>) {
+  private segmentsToSrt(
+    segments: Array<{ start: number; end: number; text: string }>,
+  ) {
     return segments
       .map((seg, i) => {
         const start = this.formatSrtTime(seg.start);

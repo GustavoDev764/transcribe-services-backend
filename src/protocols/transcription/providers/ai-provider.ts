@@ -41,6 +41,10 @@ export class TranscriptionProviderError extends Error {
 
 export interface AIProvider {
   transcribe(input: TranscriptionInput): Promise<TranscriptionOutput>;
-  startExternalJob?(input: TranscriptionInput): Promise<ExternalTranscriptionStartOutput>;
-  fetchExternalJobStatus?(externalJobId: string): Promise<ExternalTranscriptionStatusOutput>;
+  startExternalJob?(
+    input: TranscriptionInput,
+  ): Promise<ExternalTranscriptionStartOutput>;
+  fetchExternalJobStatus?(
+    externalJobId: string,
+  ): Promise<ExternalTranscriptionStatusOutput>;
 }

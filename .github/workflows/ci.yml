@@ -1,4 +1,4 @@
-name: '[CD] Prod - Build and Deploy'
+name: CI
 
 on:
   push:
@@ -24,7 +24,7 @@ jobs:
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '22'
+          node-version: "22"
           cache: npm
 
       - name: Install dependencies
@@ -34,7 +34,7 @@ jobs:
         run: npx prisma generate
 
       - name: ESLint (sem --fix)
-        run: npx eslint "{src,apps,libs,test}/**/*.ts" --max-warnings 0
+        run: npm run lint:check
 
       - name: Build
         run: npm run build

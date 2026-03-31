@@ -15,7 +15,7 @@ export class PrismaDatabaseAdapter
   implements OnModuleInit, OnModuleDestroy
 {
   constructor(
-    private readonly pool: Pool,
+    private readonly pool: InstanceType<typeof Pool>,
     adapter: PrismaPg,
   ) {
     super({ adapter });
@@ -27,6 +27,8 @@ export class PrismaDatabaseAdapter
 
   async onModuleDestroy() {
     await this.$disconnect();
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- pg.Pool#end (exports condicionais do pacote pg) */
     await this.pool.end();
+    /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   }
 }

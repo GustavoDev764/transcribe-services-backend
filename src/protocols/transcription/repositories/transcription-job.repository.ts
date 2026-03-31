@@ -10,7 +10,7 @@ export type TranscriptionJobRecord = {
   preferredModel?: string | null;
   status: TranscriptionStatus;
   providerAttempts: ProviderAttempt[];
-  responses?: unknown | null;
+  responses?: unknown;
   resultUrl?: string | null;
   resultText?: string | null;
   errorMessage?: string | null;
@@ -39,7 +39,7 @@ export interface TranscriptionJobRepository {
     status: TranscriptionStatus,
     data?: {
       providerAttempts?: ProviderAttempt[];
-      responses?: unknown | null;
+      responses?: unknown;
       resultUrl?: string | null;
       resultText?: string | null;
       errorMessage?: string | null;
@@ -53,11 +53,20 @@ export interface TranscriptionJobRepository {
 }
 
 export interface AiModelRepository {
-  findActiveOrdered(): Promise<Array<{ id: string; providerId: string; providerName: string; modelName: string }>>;
+  findActiveOrdered(): Promise<
+    Array<{
+      id: string;
+      providerId: string;
+      providerName: string;
+      modelName: string;
+    }>
+  >;
 }
 
 export interface ProviderCredentialRepository {
-  findBestByProvider(providerId: string): Promise<{ id: string; apiKey: string } | null>;
+  findBestByProvider(
+    providerId: string,
+  ): Promise<{ id: string; apiKey: string } | null>;
 }
 
 export interface UsageLogRepository {

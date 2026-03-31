@@ -29,16 +29,13 @@ export class SyncTranscriptionStatusUseCase {
 
   private resolveExternalJobId(job: {
     externalJobId?: string | null;
-    responses?: unknown | null;
+    responses?: unknown;
   }): string | null {
     if (job.externalJobId) return job.externalJobId;
     const payload = job.responses;
     if (!payload || typeof payload !== 'object') return null;
     const obj = payload as Record<string, unknown>;
-    const raw =
-      obj.job_id ??
-      obj.jobId ??
-      obj.id;
+    const raw = obj.job_id ?? obj.jobId ?? obj.id;
     return typeof raw === 'string' && raw.trim() ? raw.trim() : null;
   }
 
@@ -66,7 +63,9 @@ export class SyncTranscriptionStatusUseCase {
     });
     if (!provider) return;
 
-    const credential = await this.credentialRepository.findBestByProvider(provider.id);
+    const credential = await this.credentialRepository.findBestByProvider(
+      provider.id,
+    );
     const client = this.providerFactory.create(
       'TRANSCRIBE_SERVICES',
       credential?.apiKey ?? '',
@@ -81,19 +80,26 @@ export class SyncTranscriptionStatusUseCase {
           status.status === 'queued'
             ? TranscriptionStatus.PENDING
             : TranscriptionStatus.PROCESSING,
-          { responses: status.rawResponse ?? null, lastStatusCheckAt: new Date() },
+          {
+            responses: status.rawResponse ?? null,
+            lastStatusCheckAt: new Date(),
+          },
         );
         return;
       }
 
       if (status.status === 'completed') {
-        await this.jobRepository.updateStatus(job.id, TranscriptionStatus.SUCCESS, {
-          responses: status.rawResponse ?? null,
-          resultText: status.srtContent ?? null,
-          resultUrl: `/transcriptions/${job.id}/result`,
-          finishedAt: new Date(),
-          lastStatusCheckAt: new Date(),
-        });
+        await this.jobRepository.updateStatus(
+          job.id,
+          TranscriptionStatus.SUCCESS,
+          {
+            responses: status.rawResponse ?? null,
+            resultText: status.srtContent ?? null,
+            resultUrl: `/transcriptions/${job.id}/result`,
+            finishedAt: new Date(),
+            lastStatusCheckAt: new Date(),
+          },
+        );
         if (job.fileId) {
           await this.fileService.updateTranscriptionStatus(
             job.fileId,
@@ -109,12 +115,16 @@ export class SyncTranscriptionStatusUseCase {
         return;
       }
 
-      await this.jobRepository.updateStatus(job.id, TranscriptionStatus.FAILED, {
-        responses: status.rawResponse ?? null,
-        errorMessage: status.errorMessage ?? 'Falha no provider externo',
-        finishedAt: new Date(),
-        lastStatusCheckAt: new Date(),
-      });
+      await this.jobRepository.updateStatus(
+        job.id,
+        TranscriptionStatus.FAILED,
+        {
+          responses: status.rawResponse ?? null,
+          errorMessage: status.errorMessage ?? 'Falha no provider externo',
+          finishedAt: new Date(),
+          lastStatusCheckAt: new Date(),
+        },
+      );
       if (job.fileId) {
         await this.fileService.updateTranscriptionStatus(
           job.fileId,
@@ -124,7 +134,9 @@ export class SyncTranscriptionStatusUseCase {
     } catch (error) {
       const err = error as Error;
       const msg =
-        error instanceof TranscriptionProviderError ? error.message : err.message;
+        error instanceof TranscriptionProviderError
+          ? error.message
+          : err.message;
       await this.jobRepository.updateStatus(job.id, job.status, {
         errorMessage: msg,
         lastStatusCheckAt: new Date(),
@@ -132,4 +144,3 @@ export class SyncTranscriptionStatusUseCase {
     }
   }
 }
-

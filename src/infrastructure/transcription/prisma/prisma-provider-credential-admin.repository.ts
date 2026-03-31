@@ -7,19 +7,17 @@ import {
 } from '@app/protocols/transcription/repositories/admin-transcription.repository';
 
 @Injectable()
-export class PrismaProviderCredentialAdminRepository
-  implements ProviderCredentialAdminRepository
-{
-  constructor(
-    @Inject(DATABASE_CLIENT) private readonly db: DatabaseClient,
-  ) {}
+export class PrismaProviderCredentialAdminRepository implements ProviderCredentialAdminRepository {
+  constructor(@Inject(DATABASE_CLIENT) private readonly db: DatabaseClient) {}
 
-  async listByProvider(providerId: string): Promise<ProviderCredentialRecord[]> {
+  async listByProvider(
+    providerId: string,
+  ): Promise<ProviderCredentialRecord[]> {
     const items = await this.db.providerCredential.findMany({
       where: { providerId },
       orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
     });
-    return items.map(this.toRecord);
+    return items.map((item) => this.toRecord(item));
   }
 
   async create(data: {
@@ -43,7 +41,12 @@ export class PrismaProviderCredentialAdminRepository
 
   async update(
     id: string,
-    data: { name?: string; apiKey?: string; isActive?: boolean; priority?: number },
+    data: {
+      name?: string;
+      apiKey?: string;
+      isActive?: boolean;
+      priority?: number;
+    },
   ): Promise<ProviderCredentialRecord> {
     const item = await this.db.providerCredential.update({
       where: { id },

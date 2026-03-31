@@ -9,18 +9,19 @@ import {
 
 @Injectable()
 export class PrismaProviderAdminRepository implements ProviderAdminRepository {
-  constructor(
-    @Inject(DATABASE_CLIENT) private readonly db: DatabaseClient,
-  ) {}
+  constructor(@Inject(DATABASE_CLIENT) private readonly db: DatabaseClient) {}
 
   async list(): Promise<ProviderRecord[]> {
     const items = await this.db.provider.findMany({
       orderBy: { createdAt: 'asc' as const },
     });
-    return items.map(this.toRecord);
+    return items.map((item) => this.toRecord(item));
   }
 
-  async create(data: { name: string; isActive?: boolean }): Promise<ProviderRecord> {
+  async create(data: {
+    name: string;
+    isActive?: boolean;
+  }): Promise<ProviderRecord> {
     const item = await this.db.provider.create({
       data: {
         name: data.name as ProviderName,

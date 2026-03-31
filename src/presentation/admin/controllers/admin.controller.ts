@@ -79,9 +79,7 @@ export class AdminController {
 
   // ---- Admin Analytics ----
   @Get('analytics/token-usage')
-  getTokenUsageStats(
-    @Query('period') period?: string,
-  ) {
+  getTokenUsageStats(@Query('period') period?: string) {
     const safePeriod = ANALYTICS_PERIODS.includes(period as AnalyticsPeriod)
       ? (period as AnalyticsPeriod)
       : 'month';

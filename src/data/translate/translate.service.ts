@@ -3,7 +3,10 @@ import { GoogleAuth } from 'google-auth-library';
 import { APP_CONFIG } from '@app/config';
 import type { IEnvConfig } from '@app/config/env.interface';
 import { SystemConfigService } from '@app/data/system-config/use-cases/system-config.service';
-import { HttpClient, HttpClientError } from '@app/infrastructure/http/http-client';
+import {
+  HttpClient,
+  HttpClientError,
+} from '@app/infrastructure/http/http-client';
 import {
   TRANSLATE_LANGUAGE_NAMES,
   TRANSLATE_LANGUAGE_NAME_TO_CODE,
@@ -221,20 +224,36 @@ export class TranslateService {
     targetLanguage: string,
     sourceLanguage?: string,
   ): Promise<{ translations: string[]; detectedSourceLanguage?: string }> {
-    const body: { q: string[]; target: string; source?: string; format?: string } = {
+    const body: {
+      q: string[];
+      target: string;
+      source?: string;
+      format?: string;
+    } = {
       q: texts,
       target: targetLanguage,
       format: 'text',
     };
-    if (sourceLanguage && sourceLanguage !== 'detect' && sourceLanguage !== '') {
+    if (
+      sourceLanguage &&
+      sourceLanguage !== 'detect' &&
+      sourceLanguage !== ''
+    ) {
       body.source = sourceLanguage;
     }
-    const data = await this.requestGoogleTranslate('', { method: 'POST', body });
-    const list = (
-      data?.data as {
-        translations?: { translatedText?: string; detectedSourceLanguage?: string }[];
-      }
-    )?.translations ?? [];
+    const data = await this.requestGoogleTranslate('', {
+      method: 'POST',
+      body,
+    });
+    const list =
+      (
+        data?.data as {
+          translations?: {
+            translatedText?: string;
+            detectedSourceLanguage?: string;
+          }[];
+        }
+      )?.translations ?? [];
     if (list.length !== texts.length) {
       throw new Error(
         `Resposta incompleta do Google Tradutor: esperado ${texts.length} traduções, recebido ${list.length}`,
@@ -242,7 +261,10 @@ export class TranslateService {
     }
     const translations = list.map((t) => String(t?.translatedText ?? ''));
     const detectedSourceLanguage = list[0]?.detectedSourceLanguage;
-    return { translations, detectedSourceLanguage: detectedSourceLanguage || undefined };
+    return {
+      translations,
+      detectedSourceLanguage: detectedSourceLanguage || undefined,
+    };
   }
 
   /**
@@ -252,7 +274,12 @@ export class TranslateService {
     texts: string[],
     targetLanguage: string,
     sourceLanguage?: string,
-  ): Promise<{ translations: string[]; sourceLanguage: string; targetLanguage: string; detectedSourceLanguage?: string }> {
+  ): Promise<{
+    translations: string[];
+    sourceLanguage: string;
+    targetLanguage: string;
+    detectedSourceLanguage?: string;
+  }> {
     const enabled = await this.getEnabledLanguages();
     const enabledCodes = new Set(enabled.map((l) => l.code));
     if (!enabledCodes.has(targetLanguage)) {
@@ -271,11 +298,17 @@ export class TranslateService {
       );
     }
     if (!texts.length) {
-      return { translations: [], sourceLanguage: sourceLanguage ?? 'unknown', targetLanguage, detectedSourceLanguage: undefined };
+      return {
+        translations: [],
+        sourceLanguage: sourceLanguage ?? 'unknown',
+        targetLanguage,
+        detectedSourceLanguage: undefined,
+      };
     }
 
     const batch = this.config.GOOGLE_TRANSLATE_Q_BATCH_SIZE;
-    const maxConcurrentRequests = this.config.GOOGLE_TRANSLATE_PARALLEL_REQUESTS;
+    const maxConcurrentRequests =
+      this.config.GOOGLE_TRANSLATE_PARALLEL_REQUESTS;
     const chunks: string[][] = [];
 
     for (let i = 0; i < texts.length; i += batch) {
@@ -285,7 +318,9 @@ export class TranslateService {
     const chunkResults: Array<{
       translations: string[];
       detectedSourceLanguage?: string;
-    }> = new Array(chunks.length);
+    }> = Array.from({ length: chunks.length }, () => ({
+      translations: [] as string[],
+    }));
 
     let cursor = 0;
     const worker = async () => {
@@ -301,13 +336,17 @@ export class TranslateService {
     };
 
     await Promise.all(
-      Array.from({ length: Math.min(maxConcurrentRequests, chunks.length) }, () => worker()),
+      Array.from(
+        { length: Math.min(maxConcurrentRequests, chunks.length) },
+        () => worker(),
+      ),
     );
 
     const merged = chunkResults.flatMap((r) => r.translations);
     let lastDetected: string | undefined;
     for (const result of chunkResults) {
-      if (result.detectedSourceLanguage) lastDetected = result.detectedSourceLanguage;
+      if (result.detectedSourceLanguage)
+        lastDetected = result.detectedSourceLanguage;
     }
 
     const resolvedSource =

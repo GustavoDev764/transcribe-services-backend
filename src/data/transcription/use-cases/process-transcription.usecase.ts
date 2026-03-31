@@ -1,6 +1,9 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { ProviderName } from '@prisma/client';
-import { AIProvider, TranscriptionProviderError } from '@app/protocols/transcription/providers/ai-provider';
+import {
+  AIProvider,
+  TranscriptionProviderError,
+} from '@app/protocols/transcription/providers/ai-provider';
 import { TranscriptionDomainService } from '@app/domain/transcription/services/transcription-domain.service';
 import type {
   AiModelRepository,
@@ -19,7 +22,8 @@ import { DATABASE_CLIENT } from '@app/protocols/database/database-client.interfa
 import type { DatabaseClient } from '@app/infrastructure/database/database.types';
 
 const OPENAI_MAX_BYTES = 25 * 1024 * 1024;
-const AUDIO_MAX_MB_MESSAGE = 'O arquivo do tipo áudio (.mp3) deve ter no máximo 25MB.';
+const AUDIO_MAX_MB_MESSAGE =
+  'O arquivo do tipo áudio (.mp3) deve ter no máximo 25MB.';
 
 @Injectable()
 export class ProcessTranscriptionUseCase {
@@ -54,7 +58,10 @@ export class ProcessTranscriptionUseCase {
     const job = await this.jobRepository.findById(input.jobId);
     if (!job) throw new Error('Job não encontrado');
 
-    await this.jobRepository.updateStatus(job.id, TranscriptionStatus.PROCESSING);
+    await this.jobRepository.updateStatus(
+      job.id,
+      TranscriptionStatus.PROCESSING,
+    );
     const fileIdForStatus = this.extractFileId(job.fileUrl);
     if (fileIdForStatus) {
       await this.fileService.updateTranscriptionStatus(
@@ -69,12 +76,16 @@ export class ProcessTranscriptionUseCase {
     });
 
     if (activeProviders.length !== 1) {
-      await this.jobRepository.updateStatus(job.id, TranscriptionStatus.FAILED, {
-        errorMessage:
-          activeProviders.length === 0
-            ? 'Nenhum provedor de transcrição ativo.'
-            : 'Apenas um provedor de transcrição pode estar ativo.',
-      });
+      await this.jobRepository.updateStatus(
+        job.id,
+        TranscriptionStatus.FAILED,
+        {
+          errorMessage:
+            activeProviders.length === 0
+              ? 'Nenhum provedor de transcrição ativo.'
+              : 'Apenas um provedor de transcrição pode estar ativo.',
+        },
+      );
       if (fileIdForStatus) {
         await this.fileService.updateTranscriptionStatus(
           fileIdForStatus,
@@ -84,15 +95,20 @@ export class ProcessTranscriptionUseCase {
       return;
     }
 
-    const activeName = activeProviders[0].name as ProviderName;
+    const activeName = activeProviders[0].name;
     let fileSize = 0;
     if (fileIdForStatus) {
       try {
-        fileSize = await this.getFileBufferUseCase.getFileSizeBytes(fileIdForStatus);
+        fileSize =
+          await this.getFileBufferUseCase.getFileSizeBytes(fileIdForStatus);
       } catch {
-        await this.jobRepository.updateStatus(job.id, TranscriptionStatus.FAILED, {
-          errorMessage: 'Arquivo não encontrado no storage',
-        });
+        await this.jobRepository.updateStatus(
+          job.id,
+          TranscriptionStatus.FAILED,
+          {
+            errorMessage: 'Arquivo não encontrado no storage',
+          },
+        );
         if (fileIdForStatus) {
           await this.fileService.updateTranscriptionStatus(
             fileIdForStatus,
@@ -104,9 +120,13 @@ export class ProcessTranscriptionUseCase {
     }
 
     if (activeName === ProviderName.OPENAI && fileSize > OPENAI_MAX_BYTES) {
-      await this.jobRepository.updateStatus(job.id, TranscriptionStatus.FAILED, {
-        errorMessage: AUDIO_MAX_MB_MESSAGE,
-      });
+      await this.jobRepository.updateStatus(
+        job.id,
+        TranscriptionStatus.FAILED,
+        {
+          errorMessage: AUDIO_MAX_MB_MESSAGE,
+        },
+      );
       if (fileIdForStatus) {
         await this.fileService.updateTranscriptionStatus(
           fileIdForStatus,
@@ -117,7 +137,11 @@ export class ProcessTranscriptionUseCase {
     }
 
     if (activeName === ProviderName.TRANSCRIBE_SERVICES) {
-      await this.runTranscribeServicesJob(job, fileIdForStatus, activeProviders[0].id);
+      await this.runTranscribeServicesJob(
+        job,
+        fileIdForStatus,
+        activeProviders[0].id,
+      );
       return;
     }
 
@@ -126,9 +150,13 @@ export class ProcessTranscriptionUseCase {
     );
 
     if (!models.length) {
-      await this.jobRepository.updateStatus(job.id, TranscriptionStatus.FAILED, {
-        errorMessage: `Nenhum modelo configurado para provider ${activeName}`,
-      });
+      await this.jobRepository.updateStatus(
+        job.id,
+        TranscriptionStatus.FAILED,
+        {
+          errorMessage: `Nenhum modelo configurado para provider ${activeName}`,
+        },
+      );
       if (fileIdForStatus) {
         await this.fileService.updateTranscriptionStatus(
           fileIdForStatus,
@@ -142,7 +170,9 @@ export class ProcessTranscriptionUseCase {
     let lastError: Error | null = null;
 
     for (const model of models) {
-      const credential = await this.credentialRepository.findBestByProvider(model.providerId);
+      const credential = await this.credentialRepository.findBestByProvider(
+        model.providerId,
+      );
       if (!credential) {
         lastError = new Error('Credenciais não configuradas');
         attempts.push({
@@ -171,10 +201,14 @@ export class ProcessTranscriptionUseCase {
           fileBuffer = resolved.buffer;
           fileName = resolved.fileName;
         } catch {
-          await this.jobRepository.updateStatus(job.id, TranscriptionStatus.FAILED, {
-            providerAttempts: attempts,
-            errorMessage: 'Arquivo não encontrado no storage',
-          });
+          await this.jobRepository.updateStatus(
+            job.id,
+            TranscriptionStatus.FAILED,
+            {
+              providerAttempts: attempts,
+              errorMessage: 'Arquivo não encontrado no storage',
+            },
+          );
           if (fileIdForStatus) {
             await this.fileService.updateTranscriptionStatus(
               fileIdForStatus,
@@ -203,12 +237,16 @@ export class ProcessTranscriptionUseCase {
           finishedAt: new Date().toISOString(),
         });
 
-        await this.jobRepository.updateStatus(job.id, TranscriptionStatus.SUCCESS, {
-          providerAttempts: attempts,
-          resultUrl,
-          resultText: result.srtContent,
-          responses: result.rawResponse ?? null,
-        });
+        await this.jobRepository.updateStatus(
+          job.id,
+          TranscriptionStatus.SUCCESS,
+          {
+            providerAttempts: attempts,
+            resultUrl,
+            resultText: result.srtContent,
+            responses: result.rawResponse ?? null,
+          },
+        );
         if (fileIdForStatus) {
           await this.fileService.updateTranscriptionStatus(
             fileIdForStatus,
@@ -275,17 +313,25 @@ export class ProcessTranscriptionUseCase {
     providerId: string,
   ) {
     const attempts = job.providerAttempts ?? [];
-    const credential = await this.credentialRepository.findBestByProvider(providerId);
+    const credential =
+      await this.credentialRepository.findBestByProvider(providerId);
     const apiKey = credential?.apiKey ?? '';
 
     let provider: AIProvider;
     try {
       provider = this.providerFactory.create('TRANSCRIBE_SERVICES', apiKey);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Falha ao inicializar Transcribe Services';
-      await this.jobRepository.updateStatus(job.id, TranscriptionStatus.FAILED, {
-        errorMessage: msg,
-      });
+      const msg =
+        err instanceof Error
+          ? err.message
+          : 'Falha ao inicializar Transcribe Services';
+      await this.jobRepository.updateStatus(
+        job.id,
+        TranscriptionStatus.FAILED,
+        {
+          errorMessage: msg,
+        },
+      );
       if (fileIdForStatus) {
         await this.fileService.updateTranscriptionStatus(
           fileIdForStatus,
@@ -300,13 +346,18 @@ export class ProcessTranscriptionUseCase {
     let fileName: string | undefined;
     if (fileIdForStatus) {
       try {
-        const resolved = await this.getFileBufferUseCase.execute(fileIdForStatus);
+        const resolved =
+          await this.getFileBufferUseCase.execute(fileIdForStatus);
         fileBuffer = resolved.buffer;
         fileName = resolved.fileName;
       } catch {
-        await this.jobRepository.updateStatus(job.id, TranscriptionStatus.FAILED, {
-          errorMessage: 'Arquivo não encontrado no storage',
-        });
+        await this.jobRepository.updateStatus(
+          job.id,
+          TranscriptionStatus.FAILED,
+          {
+            errorMessage: 'Arquivo não encontrado no storage',
+          },
+        );
         if (fileIdForStatus) {
           await this.fileService.updateTranscriptionStatus(
             fileIdForStatus,
@@ -320,7 +371,9 @@ export class ProcessTranscriptionUseCase {
     const startedAt = new Date().toISOString();
     try {
       if (!provider.startExternalJob) {
-        throw new Error('Provider externo não suporta criação assíncrona de job');
+        throw new Error(
+          'Provider externo não suporta criação assíncrona de job',
+        );
       }
       const started = await provider.startExternalJob({
         fileUrl: job.fileUrl,
@@ -338,12 +391,10 @@ export class ProcessTranscriptionUseCase {
           providerAttempts: attempts,
           provider: 'TRANSCRIBE_SERVICES',
           externalJobId: started.jobId,
-          responses:
-            started.rawResponse ??
-            {
-              job_id: started.jobId,
-              status: started.status,
-            },
+          responses: started.rawResponse ?? {
+            job_id: started.jobId,
+            status: started.status,
+          },
           lastStatusCheckAt: new Date(),
         },
       );
@@ -367,11 +418,15 @@ export class ProcessTranscriptionUseCase {
         startedAt,
         finishedAt: new Date().toISOString(),
       });
-      await this.jobRepository.updateStatus(job.id, TranscriptionStatus.FAILED, {
-        providerAttempts: attempts,
-        errorMessage: error.message,
-        finishedAt: new Date(),
-      });
+      await this.jobRepository.updateStatus(
+        job.id,
+        TranscriptionStatus.FAILED,
+        {
+          providerAttempts: attempts,
+          errorMessage: error.message,
+          finishedAt: new Date(),
+        },
+      );
       if (fileIdForStatus) {
         await this.fileService.updateTranscriptionStatus(
           fileIdForStatus,

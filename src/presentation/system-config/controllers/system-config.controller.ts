@@ -16,10 +16,7 @@ export class SystemConfigController {
   }
 
   @Put(':key')
-  async setConfig(
-    @Param('key') key: string,
-    @Body() dto: SetConfigDto,
-  ) {
+  async setConfig(@Param('key') key: string, @Body() dto: SetConfigDto) {
     await this.systemConfigService.setConfig(key, dto.value);
     return { key, message: 'Configuração atualizada' };
   }
