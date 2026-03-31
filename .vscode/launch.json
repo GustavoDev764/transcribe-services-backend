@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "type": "node-terminal",
+      "request": "launch",
+      "name": "NestJS Start Debug",
+      "command": "npm.cmd run start:debug",
+      "cwd": "${workspaceFolder}"
+    },
+    {
+      "type": "node",
+      "request": "attach",
+      "name": "NestJS Attach (9229)",
+      "port": 9229,
+      "restart": true,
+      "protocol": "inspector",
+      "sourceMaps": true,
+      "skipFiles": [
+        "<node_internals>/**"
+      ]
+    }
+  ]
+}

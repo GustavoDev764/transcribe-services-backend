@@ -1,0 +1,263 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ============ USUÁRIOS E AUTENTICAÇÃO ============
+
+enum UserProfile {
+  CLIENT
+  MANAGER
+}
+
+model User {
+  id            String   @id @default(uuid())
+  email         String   @unique
+  passwordHash  String   @map("password_hash")
+  name          String
+  profile       UserProfile @default(CLIENT)
+  permissions   String[] @default([]) // ["folder:write", "upload:write", "generate_srt:write"]
+  isActive      Boolean  @default(true) @map("is_active")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  folders       Folder[]
+  files         File[]
+  uploadBatches UploadBatch[]
+  transcriptionJobAuditLogs TranscriptionJobAuditLog[]
+
+  @@map("users")
+}
+
+// ============ PASTAS E ARQUIVOS ============
+
+model Folder {
+  id        String   @id @default(uuid())
+  name      String
+  color     String   @default("#60A5FA")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user  User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files File[]
+
+  @@map("folders")
+}
+
+enum TranscriptionMode {
+  CHITA    // Mais rápido
+  GOLFINHO // Equilibrado
+  BALEIA   // Maior precisão
+}
+
+enum FileTranscriptionStatus {
+  NOT_STARTED
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+}
+
+enum UploadBatchStatus {
+  NEW
+  FINISH
+}
+
+model UploadBatch {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+  status    UploadBatchStatus @default(NEW)
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  files File[]
+
+  @@map("upload_batches")
+}
+
+model File {
+  id                  String            @id @default(uuid())
+  originalName        String            @map("original_name")
+  urlFile             String            @map("url_file") // URL de download do arquivo
+  storageExt          String            @map("storage_ext") // Extensão real no storage
+  isFavorite          Boolean           @default(false) @map("is_favorite")
+  duration            Int?              // Duração em segundos
+  mode                TranscriptionMode @default(GOLFINHO)
+  language            String            @default("pt-BR") // pt-BR, en, ja, etc
+  transcriptionText   String?           @map("transcription_text") // Texto SRT salvo no DB após transcrição
+  transcriptionStatus FileTranscriptionStatus @default(PENDING) @map("transcription_status")
+  userId              String            @map("user_id")
+  folderId            String?           @map("folder_id") // Apenas organização no DB (sem diretório físico)
+  batchId             String?           @map("batch_id")
+  createdAt           DateTime          @default(now()) @map("created_at")
+  updatedAt           DateTime          @updatedAt @map("updated_at")
+
+  user   User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  folder Folder?     @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  batch  UploadBatch? @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  @@map("files")
+}
+
+// ============ EMAIL TEMPLATES ============
+
+model EmailTemplate {
+  id          String   @id @default(uuid())
+  name        String   // Nome identificador (ex: "Reset de senha")
+  subject     String
+  bodyHtml    String   @map("body_html") // HTML do template com placeholders {{nome}}, {{link}}, etc.
+  bodyText    String?  @map("body_text") // Versão texto puro
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("email_templates")
+}
+
+// ============ CONFIGURAÇÕES DO SISTEMA ============
+
+model SystemConfig {
+  id    String @id
+  value String // JSON ou valor simples
+
+  @@map("system_configs")
+}
+
+// ============ TRANSCRIPTION DDD ============
+
+enum ProviderName {
+  OPENAI
+  GOOGLE_SPEECH
+  TRANSCRIBE_SERVICES
+}
+
+enum AiModelType {
+  TRANSCRIPTION
+}
+
+enum TranscriptionStatus {
+  PENDING
+  PROCESSING
+  SUCCESS
+  FAILED
+}
+
+model Provider {
+  id        String       @id @default(uuid())
+  name      ProviderName @unique
+  isActive  Boolean      @default(true) @map("is_active")
+  createdAt DateTime     @default(now()) @map("created_at")
+  updatedAt DateTime     @updatedAt @map("updated_at")
+
+  credentials ProviderCredential[]
+  models      AiModel[]
+  usageLogs   AiUsageLog[]
+
+  @@map("providers")
+}
+
+model ProviderCredential {
+  id          String   @id @default(uuid())
+  providerId  String   @map("provider_id")
+  name        String
+  apiKey      String   @map("api_key")
+  isActive    Boolean  @default(true) @map("is_active")
+  priority    Int      @default(0)
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  provider Provider @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  usageLogs AiUsageLog[]
+
+  @@map("provider_credentials")
+}
+
+model AiModel {
+  id         String      @id @default(uuid())
+  providerId String      @map("provider_id")
+  name       String
+  modelName  String      @map("model_name")
+  type       AiModelType @default(TRANSCRIPTION)
+  isActive   Boolean     @default(true) @map("is_active")
+  createdAt  DateTime    @default(now()) @map("created_at")
+  updatedAt  DateTime    @updatedAt @map("updated_at")
+
+  provider   Provider               @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  usageLogs  AiUsageLog[]
+
+  @@map("ai_models")
+}
+
+model TranscriptionJob {
+  id                String                     @id @default(uuid())
+  fileId            String?                    @map("file_id")
+  fileUrl           String                     @map("file_url")
+  provider          String?                    @map("provider")
+  externalJobId     String?                    @map("job_id")
+  preferredModel    String?                    @map("preferred_model")
+  status            TranscriptionStatus        @default(PENDING)
+  providerAttempts  Json?                      @map("provider_attempts")
+  responses         Json?                      @map("responses")
+  resultUrl         String?                    @map("result_url")
+  resultText        String?                    @map("result_text")
+  errorMessage      String?                    @map("error_message")
+  attempts          Int                        @default(0) @map("attempts")
+  lastStatusCheckAt DateTime?                  @map("last_status_check_at")
+  finishedAt        DateTime?                  @map("finished_at")
+  createdAt         DateTime                   @default(now()) @map("created_at")
+  updatedAt         DateTime                   @updatedAt @map("updated_at")
+  auditLogs         TranscriptionJobAuditLog[]
+
+  @@index([fileId])
+  @@index([provider])
+  @@index([status])
+  @@index([externalJobId])
+  @@map("transcription_jobs")
+}
+
+model TranscriptionJobAuditLog {
+  id                 String              @id @default(uuid())
+  transcriptionJobId String              @map("transcription_job_id")
+  userId             String              @map("user_id")
+  previousStatus     TranscriptionStatus? @map("previous_status")
+  newStatus          TranscriptionStatus? @map("new_status")
+  previousResponses  Json?               @map("previous_responses")
+  newResponses       Json?               @map("new_responses")
+  previousErrorMessage String?           @map("previous_error_message")
+  newErrorMessage      String?           @map("new_error_message")
+  createdAt          DateTime            @default(now()) @map("created_at")
+
+  transcriptionJob   TranscriptionJob    @relation(fields: [transcriptionJobId], references: [id], onDelete: Cascade)
+  user               User                @relation(fields: [userId], references: [id], onDelete: Restrict)
+
+  @@index([transcriptionJobId])
+  @@index([userId])
+  @@map("transcription_job_audit_logs")
+}
+
+model AiUsageLog {
+  id                   String              @id @default(uuid())
+  providerId           String              @map("provider_id")
+  providerCredentialId String?             @map("provider_credential_id")
+  aiModelId            String?             @map("ai_model_id")
+  tokens               Int?                @map("tokens")
+  costTotal            Float?              @map("cost_total")
+  status               TranscriptionStatus @default(SUCCESS)
+  errorMessage         String?             @map("error_message")
+  createdAt            DateTime            @default(now()) @map("created_at")
+
+  provider           Provider           @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  providerCredential ProviderCredential? @relation(fields: [providerCredentialId], references: [id], onDelete: SetNull)
+  aiModel            AiModel?           @relation(fields: [aiModelId], references: [id], onDelete: SetNull)
+
+  @@map("ai_usage_logs")
+}
+
+
+
