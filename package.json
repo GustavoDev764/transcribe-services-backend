@@ -5,7 +5,11 @@
   "author": "",
   "private": true,
   "license": "UNLICENSED",
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
+    "heroku-postbuild": "npx prisma generate && npm run build",
     "build": "nest build && tsc-alias -p tsconfig.build.json",
     "build:frontend": "cd frontend && npm run build",
     "build:all": "npm run build:frontend && npm run build",
