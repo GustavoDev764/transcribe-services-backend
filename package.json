@@ -17,7 +17,7 @@
     "start": "nest start",
     "start:dev": "kill-port 3000 && nest start --watch",
     "start:debug": "nest start --debug --watch",
-    "start:prod": "node dist/src/main",
+    "start:prod": "node dist/src/main.js",
     "lint": "npm run lint:fix",
     "lint:check": "eslint \"src/**/*.ts\" \"test/**/*.ts\" --max-warnings 0",
     "lint:fix": "npm run format && eslint \"src/**/*.ts\" \"test/**/*.ts\" --fix",
