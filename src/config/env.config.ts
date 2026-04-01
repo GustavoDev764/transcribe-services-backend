@@ -13,10 +13,6 @@ function envNumber(key: string, defaultValue: number): number {
   return Number.isNaN(n) ? defaultValue : n;
 }
 
-/**
- * Carrega e retorna o objeto de configuração a partir do .env.
- * Deve ser chamado após o dotenv estar carregado.
- */
 export function loadConfigEnv(): IEnvConfig {
   const dbHost = env('DB_HOST', 'localhost');
   const dbPort = env('DB_PORT', '5432');
@@ -66,10 +62,8 @@ export function loadConfigEnv(): IEnvConfig {
   };
 }
 
-/** Token de injeção do config (use em providers) */
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
-/** Singleton do config para uso fora do container (ex: main.ts) */
 let configEnvInstance: IEnvConfig | null = null;
 
 export function getConfigEnv(): IEnvConfig {

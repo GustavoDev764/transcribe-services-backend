@@ -8,7 +8,6 @@ export class AppController {
   root() {
     return {
       status: 'ok',
-      service: 'vidwave-backend',
       message: 'API em execução.',
       timestamp: new Date().toISOString(),
     };

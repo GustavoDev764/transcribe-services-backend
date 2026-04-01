@@ -51,7 +51,6 @@ export class AdminController {
     };
   }
 
-  // ---- Admin User Service ----
   @Get('users')
   listUsers(@Query() query: ListUsersQueryDto) {
     return this.adminUserService.listUsers(query);
@@ -77,7 +76,6 @@ export class AdminController {
     return this.adminUserService.resetPassword(id, dto);
   }
 
-  // ---- Admin Analytics ----
   @Get('analytics/token-usage')
   getTokenUsageStats(@Query('period') period?: string) {
     const safePeriod = ANALYTICS_PERIODS.includes(period as AnalyticsPeriod)
@@ -102,7 +100,6 @@ export class AdminController {
     return this.adminAnalyticsService.getTokenUsageByUser(safeSort);
   }
 
-  // ---- Admin Jobs ----
   @Get('jobs')
   listJobs(@Query() query: ListJobsQueryDto) {
     return this.adminJobService.listJobs(query);

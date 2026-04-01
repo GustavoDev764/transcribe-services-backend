@@ -33,5 +33,5 @@ export class ListUsersQueryDto {
 
   @IsOptional()
   @IsBooleanString()
-  isActive?: string; // 'true' | 'false'
+  isActive?: string;
 }

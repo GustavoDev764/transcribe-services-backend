@@ -4,7 +4,7 @@ import type { Request } from 'express';
 export const multerConfig = {
   storage: memoryStorage(),
   limits: {
-    fileSize: 10 * 1024 * 1024 * 1024, // até 10GB (Transcribe Services API)
+    fileSize: 10 * 1024 * 1024 * 1024,
   },
   fileFilter: (
     _req: Request,

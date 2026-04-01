@@ -197,7 +197,7 @@ export class FileService {
     try {
       await fs.unlink(inputPath);
     } catch {
-      // ignore
+      void 0;
     }
 
     return updated;
@@ -256,7 +256,6 @@ export class FileService {
     }
   }
 
-  /** Progresso 0–99 vindo do payload salvo em transcription_jobs.responses (ex.: whisper-api). */
   private parseTranscriptionProgressFromResponses(
     responses: unknown,
   ): number | null {
@@ -282,7 +281,6 @@ export class FileService {
     return null;
   }
 
-  /** Último job por arquivo: progresso em responses e modelo preferido (tiny/base/small). */
   private async buildLatestJobMetaByFileIds(fileIds: string[]): Promise<{
     progressByFileId: Map<string, number>;
     transcribeModelByFileId: Map<string, 'tiny' | 'base' | 'small'>;
@@ -510,7 +508,7 @@ export class FileService {
             },
           );
         } catch {
-          // jobId único evita duplicidade quando a listagem é chamada em alta frequência
+          void 0;
         }
       }),
     );
@@ -755,7 +753,7 @@ export class FileService {
     try {
       await fs.unlink(fullPath);
     } catch {
-      // ignore
+      void 0;
     }
   }
 }

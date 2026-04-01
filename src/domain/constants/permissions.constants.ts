@@ -1,7 +1,3 @@
-/**
- * Permissoes do sistema
- * Formato: recurso:acao (ex: folder:write, upload:write)
- */
 export const PERMISSIONS = {
   FOLDER_WRITE: 'folder:write',
   UPLOAD_WRITE: 'upload:write',

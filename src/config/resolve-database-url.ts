@@ -1,8 +1,8 @@
-/**
- * Conexão com Postgres: usa DATABASE_URL se estiver definida e não vazia;
- * caso contrário monta a URL a partir de DB_HOST, DB_PORT, DB_USER, DB_PASSWORD e DB_NAME.
- */
-function pickEnv(e: NodeJS.ProcessEnv, key: string, defaultValue: string): string {
+function pickEnv(
+  e: NodeJS.ProcessEnv,
+  key: string,
+  defaultValue: string,
+): string {
   const v = e[key];
   return v !== undefined && v !== '' ? v : defaultValue;
 }

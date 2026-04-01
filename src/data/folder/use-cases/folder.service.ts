@@ -96,7 +96,7 @@ export class FolderService {
     try {
       await fs.unlink(fullPath);
     } catch {
-      // ignore
+      void 0;
     }
   }
 }

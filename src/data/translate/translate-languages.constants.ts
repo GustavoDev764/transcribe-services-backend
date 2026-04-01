@@ -1,7 +1,3 @@
-/**
- * Lista de idiomas disponíveis para tradução (nomes em português).
- * Usada no painel Manage para seleção de idiomas habilitados.
- */
 export const TRANSLATE_LANGUAGE_NAMES = [
   'Abecásio',
   'Achinês',
@@ -254,7 +250,6 @@ export const TRANSLATE_LANGUAGE_NAMES = [
   'Zulu',
 ] as const;
 
-/** Mapeamento nome (PT) → código usado na API Google Translate */
 export const TRANSLATE_LANGUAGE_NAME_TO_CODE: Record<string, string> = {
   Abecásio: 'ab',
   Achinês: 'ace',

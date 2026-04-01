@@ -29,14 +29,12 @@ export class TranslateController {
     return { languages };
   }
 
-  /** Lista apenas os idiomas habilitados no painel Manage (Config → Google). Usado pelo frontend na página de tradução. */
   @Get('enabled-languages')
   async getEnabledLanguages(): Promise<{ languages: LanguageOption[] }> {
     const languages = await this.translateService.getEnabledLanguages();
     return { languages };
   }
 
-  /** Traduz vários trechos (segmentos) em uma única requisição. Retorna translations na mesma ordem. */
   @Post('segments')
   async translateSegments(@Body() dto: TranslateSegmentsRequestDto): Promise<{
     translations: string[];

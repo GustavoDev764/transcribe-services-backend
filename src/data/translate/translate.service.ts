@@ -118,10 +118,6 @@ export class TranslateService {
     }
   }
 
-  /**
-   * Retorna apenas os idiomas habilitados no painel Manage (Config → Google).
-   * Se nenhum estiver configurado, retorna todos da lista padrão.
-   */
   async getEnabledLanguages(): Promise<LanguageOption[]> {
     const raw = await this.systemConfig.getConfig(
       GOOGLE_TRANSLATE_ENABLED_LANGUAGES_KEY,
@@ -267,9 +263,6 @@ export class TranslateService {
     };
   }
 
-  /**
-   * Traduz vários trechos (segmentos), em lotes dentro do limite da API, e devolve na mesma ordem.
-   */
   async translateTexts(
     texts: string[],
     targetLanguage: string,
