@@ -3,14 +3,13 @@ import 'dotenv/config';
 import { getConfigEnv } from '@app/config';
 
 const configEnv = getConfigEnv();
-if (!process.env.DATABASE_URL) {
+if (!process.env.DATABASE_URL?.trim()) {
   process.env.DATABASE_URL = configEnv.DATABASE_URL;
 }
 
 import { NestFactory } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from '@app/main/app.module';
-import { join } from 'path';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
 async function bootstrap() {
@@ -42,7 +41,6 @@ async function bootstrap() {
     ],
     credentials: true,
   });
-  app.useStaticAssets(join(__dirname, '..', 'public'));
   await app.listen(configEnv.HOST_PORT);
 }
 void bootstrap();

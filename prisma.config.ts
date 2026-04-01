@@ -2,18 +2,7 @@
 // npm install --save-dev prisma dotenv
 import "dotenv/config";
 import { defineConfig } from "prisma/config";
-
-function getDatabaseUrl(): string {
-  if (process.env["DATABASE_URL"]) {
-    return process.env["DATABASE_URL"];
-  }
-  const host = process.env["DB_HOST"] ?? "localhost";
-  const port = process.env["DB_PORT"] ?? "5432";
-  const user = process.env["DB_USER"] ?? "postgres";
-  const password = process.env["DB_PASSWORD"] ?? "";
-  const dbName = process.env["DB_NAME"] ?? "vidwave";
-  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${dbName}?schema=public`;
-}
+import { resolveDatabaseUrl } from "./src/config/resolve-database-url.js";
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
@@ -22,6 +11,6 @@ export default defineConfig({
     seed: "npx ts-node prisma/seed.ts",
   },
   datasource: {
-    url: getDatabaseUrl(),
+    url: resolveDatabaseUrl(),
   },
 });

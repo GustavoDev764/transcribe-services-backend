@@ -3,18 +3,9 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
+import { resolveDatabaseUrl } from '../src/config/resolve-database-url.js';
 
-function getDatabaseUrl(): string {
-  if (process.env.DATABASE_URL) return process.env.DATABASE_URL;
-  const host = process.env.DB_HOST ?? 'localhost';
-  const port = process.env.DB_PORT ?? '5432';
-  const user = process.env.DB_USER ?? 'postgres';
-  const password = process.env.DB_PASSWORD ?? '';
-  const db = process.env.DB_NAME ?? 'vidwave';
-  return `postgresql://${encodeURIComponent(user)}:${encodeURIComponent(password)}@${host}:${port}/${db}?schema=public`;
-}
-
-const connectionString = getDatabaseUrl();
+const connectionString = resolveDatabaseUrl();
 const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });

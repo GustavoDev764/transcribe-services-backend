@@ -1,4 +1,5 @@
 import type { IEnvConfig } from '@app/config/env.interface';
+import { resolveDatabaseUrl } from '@app/config/resolve-database-url';
 
 function env(key: string, defaultValue: string): string {
   const v = process.env[key];
@@ -23,9 +24,7 @@ export function loadConfigEnv(): IEnvConfig {
   const dbPassword = env('DB_PASSWORD', '');
   const dbName = env('DB_NAME', 'vidwave');
 
-  const databaseUrl =
-    process.env.DATABASE_URL ||
-    `postgresql://${encodeURIComponent(dbUser)}:${encodeURIComponent(dbPassword)}@${dbHost}:${dbPort}/${dbName}?schema=public`;
+  const databaseUrl = resolveDatabaseUrl();
 
   return {
     HOST_PORT: envNumber('HOST_PORT', 3000),
