@@ -17,6 +17,8 @@ export interface IEnvConfig {
 
   JWT_EXPIRES_IN: string;
 
+  REDISCLOUD_URL: string;
+
   REDIS_HOST: string;
 
   REDIS_PORT: number;

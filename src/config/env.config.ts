@@ -32,6 +32,7 @@ export function loadConfigEnv(): IEnvConfig {
     DB_NAME: dbName,
     JWT_SECRET: env('JWT_SECRET', 'default-secret'),
     JWT_EXPIRES_IN: env('JWT_EXPIRES_IN', '7d'),
+    REDISCLOUD_URL: env('REDISCLOUD_URL', ''),
     REDIS_HOST: env('REDIS_HOST', 'localhost'),
     REDIS_PORT: envNumber('REDIS_PORT', 6379),
     UPLOAD_PATH: env('UPLOAD_PATH', './uploads'),

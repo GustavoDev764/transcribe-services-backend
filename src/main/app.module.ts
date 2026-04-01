@@ -25,12 +25,18 @@ import { TranslateModule } from '@app/main/modules/translate.module';
     }),
     ConfigEnvModule,
     BullModule.forRootAsync({
-      useFactory: (config: IEnvConfig) => ({
-        connection: {
-          host: config.REDIS_HOST,
-          port: config.REDIS_PORT,
-        },
-      }),
+      useFactory: (config: IEnvConfig) => {
+        const redisCloudUrl = config.REDISCLOUD_URL.trim();
+        if (redisCloudUrl !== '') {
+          return { connection: { url: redisCloudUrl } };
+        }
+        return {
+          connection: {
+            host: config.REDIS_HOST,
+            port: config.REDIS_PORT,
+          },
+        };
+      },
       inject: [APP_CONFIG],
     }),
     DatabaseModule,
