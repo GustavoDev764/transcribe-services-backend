@@ -23,7 +23,7 @@ export function loadConfigEnv(): IEnvConfig {
   const databaseUrl = resolveDatabaseUrl();
 
   return {
-    HOST_PORT: envNumber('HOST_PORT', 3000),
+    HOST_PORT: envNumber('PORT', envNumber('HOST_PORT', 3000)),
     DATABASE_URL: databaseUrl,
     DB_HOST: dbHost,
     DB_PORT: dbPort,

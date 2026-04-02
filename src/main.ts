@@ -48,6 +48,6 @@ async function bootstrap() {
       'ngrok-skip-browser-warning',
     ],
   });
-  await app.listen(configEnv.HOST_PORT);
+  await app.listen(configEnv.HOST_PORT, '0.0.0.0');
 }
 void bootstrap();
