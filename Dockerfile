@@ -22,6 +22,7 @@ RUN apk add --no-cache openssl libc6-compat
 ENV NODE_ENV=production
 
 COPY package.json package-lock.json* ./
+COPY prisma.config.ts ./
 COPY prisma ./prisma/
 
 RUN npm ci --omit=dev && npx prisma generate \
