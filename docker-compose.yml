@@ -1,0 +1,65 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: vidwave-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: vidwave
+    ports:
+      - '5432:5432'
+    volumes:
+      - vidwave_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d vidwave']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: vidwave-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - vidwave_redisdata:/data
+    command: redis-server --appendonly yes
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: vidwave-api
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      NODE_ENV: production
+      HOST_PORT: '3000'
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/vidwave?schema=public
+      DB_HOST: postgres
+      DB_PORT: '5432'
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DB_NAME: vidwave
+      REDIS_HOST: redis
+      REDIS_PORT: '6379'
+      REDIS_DB: '0'
+      JWT_SECRET: ${JWT_SECRET:-troque-este-segredo-em-producao}
+      UPLOAD_PATH: /app/uploads
+      STORAGE_PATH: /app/storage
+    volumes:
+      - vidwave_uploads:/app/uploads
+      - vidwave_storage:/app/storage
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+volumes:
+  vidwave_pgdata:
+  vidwave_redisdata:
+  vidwave_uploads:
+  vidwave_storage:
