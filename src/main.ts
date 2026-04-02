@@ -34,12 +34,21 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
+  // `origin: true` reflete o Origin da requisição → qualquer URL de frontend funciona
+  // (com `credentials: true` não dá para usar `origin: '*'`).
+  // Em produção, prefira lista fixa ou variável de ambiente.
   app.enableCors({
-    origin: [
-      'http://localhost:5173',
-      'https://unbearing-baric-alda.ngrok-free.dev',
-    ],
+    origin: true,
     credentials: true,
+    methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'X-Requested-With',
+      // Free tier: o browser precisa poder enviar isso no preflight se o cliente adicionar
+      'ngrok-skip-browser-warning',
+    ],
   });
   await app.listen(configEnv.HOST_PORT);
 }
