@@ -23,6 +23,8 @@ export interface IEnvConfig {
 
   REDIS_PORT: number;
 
+  REDIS_DB: number;
+
   UPLOAD_PATH: string;
 
   STORAGE_PATH: string;

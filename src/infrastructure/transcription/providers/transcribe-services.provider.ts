@@ -119,6 +119,7 @@ export class TranscribeServicesProvider implements AIProvider {
   ): Promise<ExternalTranscriptionStatusOutput> {
     try {
       const jobRes = await HttpClient.get<{
+        id: string;
         status?: string;
         text_content?: string;
         segments?: Array<{ start: number; end: number; text: string }>;
@@ -127,7 +128,10 @@ export class TranscribeServicesProvider implements AIProvider {
       }>(this.url(`/job/${externalJobId}`), {
         headers: this.headers(),
       });
-      const job = jobRes.data;
+      const job = {
+        job_id: jobRes.data.id,
+        ...jobRes.data,
+      };
       const st = (job.status || '').toLowerCase();
       if (st === 'failed' || st === 'error') {
         return {

@@ -35,6 +35,7 @@ export function loadConfigEnv(): IEnvConfig {
     REDISCLOUD_URL: env('REDISCLOUD_URL', ''),
     REDIS_HOST: env('REDIS_HOST', 'localhost'),
     REDIS_PORT: envNumber('REDIS_PORT', 6379),
+    REDIS_DB: envNumber('REDIS_DB', 0),
     UPLOAD_PATH: env('UPLOAD_PATH', './uploads'),
     STORAGE_PATH: env('STORAGE_PATH', './storage'),
     MANAGER_EMAIL: env('MANAGER_EMAIL', ''),

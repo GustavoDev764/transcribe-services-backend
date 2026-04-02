@@ -486,7 +486,9 @@ export class FileService {
         fileId: { in: fileIds },
         provider: 'TRANSCRIBE_SERVICES',
         externalJobId: { not: null },
-        status: TranscriptionStatus.PROCESSING,
+        status: {
+          in: [TranscriptionStatus.PROCESSING, TranscriptionStatus.PENDING],
+        },
         OR: [
           { lastStatusCheckAt: null },
           { lastStatusCheckAt: { lte: minLastCheckBefore } },

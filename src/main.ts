@@ -34,9 +34,7 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
     }),
   );
-  // `origin: true` reflete o Origin da requisição → qualquer URL de frontend funciona
-  // (com `credentials: true` não dá para usar `origin: '*'`).
-  // Em produção, prefira lista fixa ou variável de ambiente.
+
   app.enableCors({
     origin: true,
     credentials: true,
@@ -46,7 +44,7 @@ async function bootstrap() {
       'Authorization',
       'Accept',
       'X-Requested-With',
-      // Free tier: o browser precisa poder enviar isso no preflight se o cliente adicionar
+
       'ngrok-skip-browser-warning',
     ],
   });

@@ -34,6 +34,7 @@ import { TranslateModule } from '@app/main/modules/translate.module';
           connection: {
             host: config.REDIS_HOST,
             port: config.REDIS_PORT,
+            db: config.REDIS_DB,
           },
         };
       },
