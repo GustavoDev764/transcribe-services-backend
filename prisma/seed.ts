@@ -3,7 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 import * as bcrypt from 'bcrypt';
-import { resolveDatabaseUrl } from '../src/config/resolve-database-url.js';
+import { resolveDatabaseUrl } from './database-url.js';
 
 const connectionString = resolveDatabaseUrl();
 const pool = new Pool({ connectionString });

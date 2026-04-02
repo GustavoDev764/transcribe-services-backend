@@ -24,10 +24,14 @@ ENV NODE_ENV=production
 COPY package.json package-lock.json* ./
 COPY prisma ./prisma/
 
-RUN npm ci --omit=dev && npx prisma generate
+RUN npm ci --omit=dev && npx prisma generate \
+  && npm install ts-node typescript @types/node --no-save
 
 COPY --from=builder /app/dist ./dist
 
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
 EXPOSE 3000
 
-CMD ["node", "dist/src/main.js"]
+ENTRYPOINT ["docker-entrypoint.sh"]
