@@ -11,9 +11,11 @@ import {
   TranscriptionMode,
   UploadBatchStatus,
 } from '@prisma/client';
+import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
 import { TranscriptionStatus } from '@app/domain/transcription/value-objects/transcription-status';
 import * as path from 'path';
 import * as fs from 'fs/promises';
+import { createReadStream } from 'fs';
 import { spawn } from 'child_process';
 import { v4 as uuidv4 } from 'uuid';
 import ffmpeg from 'fluent-ffmpeg';
@@ -476,7 +478,11 @@ export class FileService {
       where: { isActive: true },
       select: { name: true },
     });
-    if (active.length !== 1 || active[0].name !== 'TRANSCRIBE_SERVICES') return;
+    if (
+      active.length !== 1 ||
+      active[0].name !== ProviderName.TRANSCRIBE_SERVICES
+    )
+      return;
 
     const minLastCheckBefore = new Date(
       Date.now() - FileService.TRANSCRIBE_RECHECK_SECONDS * 1000,
@@ -484,7 +490,7 @@ export class FileService {
     const pending = await this.db.transcriptionJob.findMany({
       where: {
         fileId: { in: fileIds },
-        provider: 'TRANSCRIBE_SERVICES',
+        provider: ProviderName.TRANSCRIBE_SERVICES,
         externalJobId: { not: null },
         status: {
           in: [TranscriptionStatus.PROCESSING, TranscriptionStatus.PENDING],
@@ -757,5 +763,24 @@ export class FileService {
     } catch {
       void 0;
     }
+  }
+
+  /** Stream do binário no storage (ex.: worker Whisper com URL assinada). Não valida userId. */
+  async getInternalStorageReadStream(fileId: string): Promise<{
+    stream: ReturnType<typeof createReadStream>;
+    originalName: string;
+  }> {
+    const file = await this.db.file.findUnique({ where: { id: fileId } });
+    if (!file) throw new NotFoundException('Arquivo não encontrado');
+    const fullPath = this.getStorageFilePath(file.id, file.storageExt);
+    try {
+      await fs.access(fullPath);
+    } catch {
+      throw new NotFoundException('Arquivo não encontrado no storage');
+    }
+    return {
+      stream: createReadStream(fullPath),
+      originalName: file.originalName,
+    };
   }
 }

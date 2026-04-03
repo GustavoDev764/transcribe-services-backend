@@ -1,5 +1,5 @@
 import { Injectable, Inject } from '@nestjs/common';
-import { ProviderName } from '@prisma/client';
+import { ProviderName as PrismaProviderName } from '@prisma/client';
 import { DATABASE_CLIENT } from '@app/protocols/database/database-client.interface';
 import type { DatabaseClient } from '@app/infrastructure/database/database.types';
 import {
@@ -20,11 +20,13 @@ export class PrismaProviderAdminRepository implements ProviderAdminRepository {
 
   async create(data: {
     name: string;
+    displayName?: string | null;
     isActive?: boolean;
   }): Promise<ProviderRecord> {
     const item = await this.db.provider.create({
       data: {
-        name: data.name as ProviderName,
+        name: data.name as PrismaProviderName,
+        displayName: data.displayName ?? null,
         isActive: data.isActive ?? true,
       },
     });
@@ -33,13 +35,22 @@ export class PrismaProviderAdminRepository implements ProviderAdminRepository {
 
   async update(
     id: string,
-    data: { name?: string; isActive?: boolean },
+    data: {
+      name?: string;
+      displayName?: string | null;
+      isActive?: boolean;
+    },
   ): Promise<ProviderRecord> {
     const item = await this.db.provider.update({
       where: { id },
       data: {
-        name: data.name as ProviderName | undefined,
-        isActive: data.isActive,
+        ...(data.name !== undefined && {
+          name: data.name as PrismaProviderName,
+        }),
+        ...(data.displayName !== undefined && {
+          displayName: data.displayName,
+        }),
+        ...(data.isActive !== undefined && { isActive: data.isActive }),
       },
     });
     return this.toRecord(item);
@@ -63,6 +74,7 @@ export class PrismaProviderAdminRepository implements ProviderAdminRepository {
   private toRecord(p: {
     id: string;
     name: string;
+    displayName: string | null;
     isActive: boolean;
     createdAt: Date;
     updatedAt: Date;
@@ -70,6 +82,7 @@ export class PrismaProviderAdminRepository implements ProviderAdminRepository {
     return {
       id: p.id,
       name: p.name,
+      displayName: p.displayName,
       isActive: p.isActive,
       createdAt: p.createdAt,
       updatedAt: p.updatedAt,

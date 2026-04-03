@@ -62,20 +62,31 @@ export function loadConfigEnv(): IEnvConfig {
       'https://www.googleapis.com/auth/cloud-platform',
     ),
     TRANSCRIBE_HOST: env('TRANSCRIBE_HOST', ''),
+    RABBITMQ_URL: env('RABBITMQ_URL', env('WHISPER_RABBITMQ_URL', '')),
+    WHISPER_JOBS_QUEUE: env('WHISPER_JOBS_QUEUE', 'nest_whisper_jobs'),
+    WHISPER_STATUS_QUEUE: env('WHISPER_STATUS_QUEUE', 'nest_whisper_status'),
+    TRANSCRIPTION_SHARED_STORAGE_PATH: env('TRANSCRIPTION_SHARED_STORAGE_PATH', ''),
+    PUBLIC_APP_URL: env('PUBLIC_APP_URL', ''),
+    WHISPER_MQ_DOWNLOAD_SECRET: env('WHISPER_MQ_DOWNLOAD_SECRET', ''),
+    WHISPER_MQ_DOWNLOAD_TTL_SEC: Math.min(
+      86400 * 7,
+      Math.max(60, envNumber('WHISPER_MQ_DOWNLOAD_TTL_SEC', 3600)),
+    ),
   };
 }
 
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
-let configEnvInstance: IEnvConfig | null = null;
+/** Se não for null, getConfigEnv() devolve isto (testes). Caso contrário, lê process.env de novo. */
+let testConfigOverride: IEnvConfig | null = null;
 
 export function getConfigEnv(): IEnvConfig {
-  if (!configEnvInstance) {
-    configEnvInstance = loadConfigEnv();
+  if (testConfigOverride !== null) {
+    return testConfigOverride;
   }
-  return configEnvInstance;
+  return loadConfigEnv();
 }
 
 export function setConfigEnvForTests(config: IEnvConfig | null): void {
-  configEnvInstance = config;
+  testConfigOverride = config;
 }

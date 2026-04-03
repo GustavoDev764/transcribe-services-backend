@@ -1,4 +1,5 @@
 import { ProviderAttempt } from '@app/domain/transcription/entities/transcription-job.entity';
+import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
 import { TranscriptionStatus } from '@app/domain/transcription/value-objects/transcription-status';
 
 export type TranscriptionJobRecord = {
@@ -57,7 +58,17 @@ export interface AiModelRepository {
     Array<{
       id: string;
       providerId: string;
-      providerName: string;
+      providerName: ProviderName;
+      modelName: string;
+    }>
+  >;
+
+  /** Modelos ativos do provider com categoria IA tipo text_generation. */
+  findActiveTextGenerationByProviderId(providerId: string): Promise<
+    Array<{
+      id: string;
+      providerId: string;
+      providerName: ProviderName;
       modelName: string;
     }>
   >;

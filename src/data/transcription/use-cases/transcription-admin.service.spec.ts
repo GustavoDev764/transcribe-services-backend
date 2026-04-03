@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
 import { TranscriptionAdminService } from './transcription-admin.service';
 import { TRANSCRIPTION_ADMIN_TOKENS } from './transcription-admin.service';
 
@@ -25,6 +26,13 @@ const mockAiModelRepo = {
   delete: jest.fn(),
 };
 
+const mockIaCategoryRepo = {
+  list: jest.fn(),
+  create: jest.fn(),
+  update: jest.fn(),
+  delete: jest.fn(),
+};
+
 describe('TranscriptionAdminService', () => {
   let service: TranscriptionAdminService;
 
@@ -45,6 +53,10 @@ describe('TranscriptionAdminService', () => {
           provide: TRANSCRIPTION_ADMIN_TOKENS.AiModelRepository,
           useValue: mockAiModelRepo,
         },
+        {
+          provide: TRANSCRIPTION_ADMIN_TOKENS.IaCategoryRepository,
+          useValue: mockIaCategoryRepo,
+        },
       ],
     }).compile();
 
@@ -57,7 +69,17 @@ describe('TranscriptionAdminService', () => {
 
   describe('listProviders', () => {
     it('deve delegar ao repositório de providers', async () => {
-      const providers = [{ id: '1', name: 'OPENAI', isActive: true }];
+      const now = new Date();
+      const providers = [
+        {
+          id: '1',
+          name: ProviderName.OPENAI,
+          displayName: 'OpenIA',
+          isActive: true,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ];
       mockProviderRepo.list.mockResolvedValue(providers);
 
       const result = await service.listProviders();
@@ -69,7 +91,7 @@ describe('TranscriptionAdminService', () => {
 
   describe('createProvider', () => {
     it('deve criar provider com valores padrão', async () => {
-      const dto = { name: 'OPENAI' as const };
+      const dto = { name: ProviderName.OPENAI };
       const created = { id: '1', ...dto, isActive: true };
       mockProviderRepo.deactivateAll.mockResolvedValue(undefined);
       mockProviderRepo.create.mockResolvedValue(created);
@@ -78,7 +100,8 @@ describe('TranscriptionAdminService', () => {
 
       expect(mockProviderRepo.deactivateAll).toHaveBeenCalledTimes(1);
       expect(mockProviderRepo.create).toHaveBeenCalledWith({
-        name: 'OPENAI',
+        name: ProviderName.OPENAI,
+        displayName: null,
         isActive: true,
       });
       expect(result).toEqual(created);

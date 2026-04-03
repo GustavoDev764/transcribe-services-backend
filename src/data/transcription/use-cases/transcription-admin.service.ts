@@ -1,8 +1,11 @@
-import { Injectable, Inject } from '@nestjs/common';
+import { BadRequestException, Injectable, Inject } from '@nestjs/common';
+import { IaCategoryKind } from '@prisma/client';
 import type { ProviderAdminRepository } from '@app/protocols/transcription/repositories/admin-transcription.repository';
 import type { ProviderCredentialAdminRepository } from '@app/protocols/transcription/repositories/admin-transcription.repository';
 import type { AiModelAdminRepository } from '@app/protocols/transcription/repositories/admin-transcription.repository';
+import type { IaCategoryAdminRepository } from '@app/protocols/transcription/repositories/admin-transcription.repository';
 import { CreateProviderDto } from '@app/presentation/transcription/requests/admin/create-provider.dto';
+import { UpdateProviderDto } from '@app/presentation/transcription/requests/admin/update-provider.dto';
 import { CreateCredentialDto } from '@app/presentation/transcription/requests/admin/create-credential.dto';
 import { CreateModelDto } from '@app/presentation/transcription/requests/admin/create-model.dto';
 
@@ -12,6 +15,7 @@ export const TRANSCRIPTION_ADMIN_TOKENS = {
     'TranscriptionAdmin.ProviderCredentialRepository',
   ),
   AiModelRepository: Symbol('TranscriptionAdmin.AiModelRepository'),
+  IaCategoryRepository: Symbol('TranscriptionAdmin.IaCategoryRepository'),
 } as const;
 
 @Injectable()
@@ -23,6 +27,8 @@ export class TranscriptionAdminService {
     private readonly credentialRepo: ProviderCredentialAdminRepository,
     @Inject(TRANSCRIPTION_ADMIN_TOKENS.AiModelRepository)
     private readonly aiModelRepo: AiModelAdminRepository,
+    @Inject(TRANSCRIPTION_ADMIN_TOKENS.IaCategoryRepository)
+    private readonly iaCategoryRepo: IaCategoryAdminRepository,
   ) {}
 
   listProviders() {
@@ -36,16 +42,18 @@ export class TranscriptionAdminService {
     }
     return this.providerRepo.create({
       name: dto.name,
+      displayName: dto.displayName ?? null,
       isActive,
     });
   }
 
-  async updateProvider(id: string, dto: CreateProviderDto) {
+  async updateProvider(id: string, dto: UpdateProviderDto) {
     if (dto.isActive === true) {
       await this.providerRepo.deactivateAllExcept(id);
     }
     return this.providerRepo.update(id, {
       name: dto.name,
+      displayName: dto.displayName,
       isActive: dto.isActive,
     });
   }
@@ -88,8 +96,13 @@ export class TranscriptionAdminService {
   createModel(dto: CreateModelDto) {
     return this.aiModelRepo.create({
       providerId: dto.providerId,
+      categoryId: dto.categoryId ?? null,
       name: dto.name,
       modelName: dto.modelName,
+      subtitle: dto.subtitle?.trim() ? dto.subtitle.trim() : null,
+      textTooltip: dto.textTooltip?.trim() ? dto.textTooltip.trim() : null,
+      urlIcone: dto.urlIcone ?? null,
+      iconFileName: dto.iconFileName ?? null,
       type: dto.type ?? 'TRANSCRIPTION',
       isActive: dto.isActive ?? true,
     });
@@ -98,8 +111,17 @@ export class TranscriptionAdminService {
   updateModel(id: string, dto: Partial<CreateModelDto>) {
     return this.aiModelRepo.update(id, {
       providerId: dto.providerId,
+      categoryId: dto.categoryId,
       name: dto.name,
       modelName: dto.modelName,
+      ...(dto.subtitle !== undefined && {
+        subtitle: dto.subtitle?.trim() ? dto.subtitle.trim() : null,
+      }),
+      ...(dto.textTooltip !== undefined && {
+        textTooltip: dto.textTooltip?.trim() ? dto.textTooltip.trim() : null,
+      }),
+      urlIcone: dto.urlIcone,
+      iconFileName: dto.iconFileName,
       type: dto.type,
       isActive: dto.isActive,
     });
@@ -107,5 +129,47 @@ export class TranscriptionAdminService {
 
   deleteModel(id: string) {
     return this.aiModelRepo.delete(id);
+  }
+
+  listIaCategories() {
+    return this.iaCategoryRepo.list();
+  }
+
+  createIaCategory(dto: {
+    name: string;
+    tipo?: IaCategoryKind;
+  }) {
+    const tipo = dto.tipo ?? IaCategoryKind.TEXT_GENERATION;
+    if (tipo === IaCategoryKind.AUDIO_AND_SPEECH) {
+      throw new BadRequestException(
+        'O tipo "Áudio e fala" (audio_and_speech) estará disponível em breve.',
+      );
+    }
+    return this.iaCategoryRepo.create({
+      name: dto.name,
+      tipo,
+    });
+  }
+
+  updateIaCategory(
+    id: string,
+    dto: { name?: string; tipo?: IaCategoryKind },
+  ) {
+    if (dto.tipo === IaCategoryKind.AUDIO_AND_SPEECH) {
+      throw new BadRequestException(
+        'O tipo "Áudio e fala" (audio_and_speech) estará disponível em breve.',
+      );
+    }
+    if (dto.name === undefined && dto.tipo === undefined) {
+      throw new BadRequestException('Informe ao menos um campo para atualizar');
+    }
+    return this.iaCategoryRepo.update(id, {
+      ...(dto.name !== undefined && { name: dto.name }),
+      ...(dto.tipo !== undefined && { tipo: dto.tipo }),
+    });
+  }
+
+  deleteIaCategory(id: string) {
+    return this.iaCategoryRepo.delete(id);
   }
 }

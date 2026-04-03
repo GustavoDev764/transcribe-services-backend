@@ -1,9 +1,10 @@
 import { IsBoolean, IsEnum, IsOptional, IsString, MaxLength } from 'class-validator';
 import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
 
-export class CreateProviderDto {
+export class UpdateProviderDto {
+  @IsOptional()
   @IsEnum(ProviderName)
-  name: ProviderName;
+  name?: ProviderName;
 
   @IsOptional()
   @IsString()

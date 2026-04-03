@@ -6,6 +6,7 @@ import {
   TranscriptionJobRecord,
   TranscriptionJobRepository,
 } from '@app/protocols/transcription/repositories/transcription-job.repository';
+import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
 import { TranscriptionStatus } from '@app/domain/transcription/value-objects/transcription-status';
 import { ProviderAttempt } from '@app/domain/transcription/entities/transcription-job.entity';
 
@@ -84,7 +85,7 @@ export class PrismaTranscriptionJobRepository implements TranscriptionJobReposit
     const rows = await this.db.transcriptionJob.findMany({
       where: {
         fileId: { in: fileIds },
-        provider: 'TRANSCRIBE_SERVICES',
+        provider: ProviderName.TRANSCRIBE_SERVICES,
         externalJobId: { not: null },
         status: {
           in: [TranscriptionStatus.PENDING, TranscriptionStatus.PROCESSING],

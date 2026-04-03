@@ -20,6 +20,11 @@ import { TRANSCRIPTION_TOKENS } from '@app/domain/transcription/constants/transc
 import { Readable } from 'stream';
 import type { Request } from 'express';
 import { FileService } from '@app/data/file/use-cases/file.service';
+import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
+import { SystemConfigService } from '@app/data/system-config/use-cases/system-config.service';
+import { SYSTEM_CONFIG_KEYS } from '@app/data/system-config/system-config-keys';
+import { mergeTranscribeModelUiFromJson } from '@app/data/transcription/transcribe-model-ui';
+import { IaCategoryKind } from '@prisma/client';
 
 @Controller('transcriptions')
 @UseGuards(JwtAuthGuard)
@@ -30,6 +35,7 @@ export class TranscriptionController {
     @Inject(TRANSCRIPTION_TOKENS.JobRepository)
     private readonly jobRepository: TranscriptionJobRepository,
     @Inject(DATABASE_CLIENT) private readonly db: DatabaseClient,
+    private readonly systemConfig: SystemConfigService,
   ) {}
 
   @Get('integration')
@@ -39,10 +45,57 @@ export class TranscriptionController {
       orderBy: { createdAt: 'asc' },
     });
     const single = active.length === 1 ? active[0] : null;
+    const name = single?.name ?? null;
+    const rawUi = await this.systemConfig.getConfig(
+      SYSTEM_CONFIG_KEYS.TRANSCRIBE_MODEL_UI_CONFIG,
+    );
+    const transcribe_model_ui = mergeTranscribeModelUiFromJson(rawUi);
+
+    let transcription_models: Array<{
+      id: string;
+      name: string;
+      model_name: string;
+      subtitle: string | null;
+      text_tooltip: string | null;
+      url_icone: string | null;
+      icon_file_name: string | null;
+    }> = [];
+    if (single) {
+      const rows = await this.db.aiModel.findMany({
+        where: {
+          providerId: single.id,
+          isActive: true,
+          category: { tipo: IaCategoryKind.TEXT_GENERATION },
+        },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          name: true,
+          modelName: true,
+          subtitle: true,
+          textTooltip: true,
+          urlIcone: true,
+          iconFileName: true,
+        },
+      });
+      transcription_models = rows.map((m) => ({
+        id: m.id,
+        name: m.name,
+        model_name: m.modelName,
+        subtitle: m.subtitle,
+        text_tooltip: m.textTooltip,
+        url_icone: m.urlIcone,
+        icon_file_name: m.iconFileName,
+      }));
+    }
+
     return {
-      active_provider: single?.name ?? null,
-      transcribe_services_enabled: single?.name === 'TRANSCRIBE_SERVICES',
-      openai_enabled: single?.name === 'OPENAI',
+      active_provider: name,
+      transcribe_services_enabled: name === ProviderName.TRANSCRIBE_SERVICES,
+      openai_enabled: name === ProviderName.OPENAI,
+      google_speech_enabled: name === ProviderName.GOOGLE,
+      transcribe_model_ui,
+      transcription_models,
     };
   }
 
@@ -52,7 +105,8 @@ export class TranscriptionController {
     return this.createUseCase.execute({
       fileUrl,
       fileId: dto.file_id,
-      preferredModel: dto.transcribe_model ?? null,
+      preferredAiModelId: dto.preferred_ai_model_id ?? null,
+      transcribeModel: dto.transcribe_model ?? null,
     });
   }
 

@@ -1,7 +1,8 @@
 import { BadRequestException, Inject, Injectable } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { FileTranscriptionStatus, ProviderName } from '@prisma/client';
+import { FileTranscriptionStatus, IaCategoryKind } from '@prisma/client';
+import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
 import type { TranscriptionJobRepository } from '@app/protocols/transcription/repositories/transcription-job.repository';
 import { TRANSCRIPTION_TOKENS } from '@app/domain/transcription/constants/transcription.tokens';
 import { FileService } from '@app/data/file/use-cases/file.service';
@@ -27,7 +28,8 @@ export class CreateTranscriptionUseCase {
   async execute(input: {
     fileUrl: string;
     fileId: string;
-    preferredModel?: string | null;
+    preferredAiModelId?: string | null;
+    transcribeModel?: 'tiny' | 'base' | 'small' | null;
   }) {
     const active = await this.db.provider.findMany({
       where: { isActive: true },
@@ -41,7 +43,8 @@ export class CreateTranscriptionUseCase {
       );
     }
 
-    const providerName = active[0].name;
+    const providerName = active[0].name as ProviderName;
+    const activeProviderId = active[0].id;
     const sizeBytes = await this.getFileBufferUseCase.getFileSizeBytes(
       input.fileId,
     );
@@ -50,21 +53,39 @@ export class CreateTranscriptionUseCase {
       throw new BadRequestException(AUDIO_MAX_MB_MESSAGE);
     }
 
-    const rawPreferred = input.preferredModel?.trim();
-    if (rawPreferred && providerName !== ProviderName.TRANSCRIBE_SERVICES) {
+    const rawWhisper = input.transcribeModel?.trim();
+    if (
+      rawWhisper &&
+      providerName !== ProviderName.TRANSCRIBE_SERVICES &&
+      !input.preferredAiModelId?.trim()
+    ) {
       throw new BadRequestException(
         'O parâmetro transcribe_model só é permitido quando o provider ativo é Transcribe Services.',
       );
     }
 
+    const rawAiModelId = input.preferredAiModelId?.trim();
     let preferredModel: string | null = null;
-    if (providerName === ProviderName.TRANSCRIBE_SERVICES) {
-      preferredModel = rawPreferred || 'small';
-      if (!['tiny', 'base', 'small'].includes(preferredModel)) {
+
+    if (rawAiModelId) {
+      const row = await this.db.aiModel.findFirst({
+        where: {
+          id: rawAiModelId,
+          isActive: true,
+          providerId: activeProviderId,
+          category: { tipo: IaCategoryKind.TEXT_GENERATION },
+        },
+      });
+      if (!row) {
         throw new BadRequestException(
-          'Modelo de transcrição inválido. Use tiny, base ou small.',
+          'Modelo de transcrição inválido ou indisponível para o provedor ativo.',
         );
       }
+      preferredModel = rawAiModelId;
+    } else if (providerName === ProviderName.TRANSCRIBE_SERVICES) {
+      const w = rawWhisper ?? '';
+      preferredModel =
+        w && ['tiny', 'base', 'small'].includes(w) ? w : 'small';
     }
 
     const job = await this.jobRepository.create({

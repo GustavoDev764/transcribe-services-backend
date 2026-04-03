@@ -1,9 +1,12 @@
 import type { PrismaClient } from '@prisma/client';
+import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
 import * as bcrypt from 'bcrypt';
+
+const IA_CATEGORY_SPEECH_TO_TEXT_ID = 'c0000000-0000-4000-8000-000000000001';
 
 export type InitialSeedDb = Pick<
   PrismaClient,
-  'user' | 'provider' | 'aiModel'
+  'user' | 'provider' | 'aiModel' | 'iaCategory'
 >;
 
 export async function runInitialSeed(
@@ -30,21 +33,39 @@ export async function runInitialSeed(
     },
   });
 
+  /** Categoria tipo text_generation: modelos listados no cliente para escolha de transcrição. */
+  const speechCategory = await db.iaCategory.upsert({
+    where: { id: IA_CATEGORY_SPEECH_TO_TEXT_ID },
+    update: {
+      name: 'speech to text',
+      tipo: 'TEXT_GENERATION',
+    },
+    create: {
+      id: IA_CATEGORY_SPEECH_TO_TEXT_ID,
+      name: 'speech to text',
+      tipo: 'TEXT_GENERATION',
+    },
+  });
+
   const openAiProvider = await db.provider.upsert({
-    where: { name: 'OPENAI' },
-    update: {},
-    create: { name: 'OPENAI' },
+    where: { name: ProviderName.OPENAI },
+    update: { displayName: 'OpenIA' },
+    create: { name: ProviderName.OPENAI, displayName: 'OpenIA' },
   });
   const googleProvider = await db.provider.upsert({
-    where: { name: 'GOOGLE_SPEECH' },
-    update: {},
-    create: { name: 'GOOGLE_SPEECH' },
+    where: { name: ProviderName.GOOGLE },
+    update: { displayName: 'Google' },
+    create: { name: ProviderName.GOOGLE, displayName: 'Google' },
   });
 
   await db.provider.upsert({
-    where: { name: 'TRANSCRIBE_SERVICES' },
-    update: {},
-    create: { name: 'TRANSCRIBE_SERVICES', isActive: false },
+    where: { name: ProviderName.TRANSCRIBE_SERVICES },
+    update: { displayName: 'Transcribe services' },
+    create: {
+      name: ProviderName.TRANSCRIBE_SERVICES,
+      displayName: 'Transcribe services',
+      isActive: false,
+    },
   });
 
   await Promise.all([
@@ -52,6 +73,7 @@ export async function runInitialSeed(
       where: { id: 'openai-fast' },
       update: {
         providerId: openAiProvider.id,
+        categoryId: speechCategory.id,
         name: 'OpenAI Fast',
         modelName: 'gpt-4o-mini-transcribe',
         type: 'TRANSCRIPTION',
@@ -60,6 +82,7 @@ export async function runInitialSeed(
       create: {
         id: 'openai-fast',
         providerId: openAiProvider.id,
+        categoryId: speechCategory.id,
         name: 'OpenAI Fast',
         modelName: 'gpt-4o-mini-transcribe',
         type: 'TRANSCRIPTION',
@@ -69,6 +92,7 @@ export async function runInitialSeed(
       where: { id: 'openai-accurate' },
       update: {
         providerId: openAiProvider.id,
+        categoryId: speechCategory.id,
         name: 'OpenAI Accurate',
         modelName: 'gpt-4o-transcribe',
         type: 'TRANSCRIPTION',
@@ -77,6 +101,7 @@ export async function runInitialSeed(
       create: {
         id: 'openai-accurate',
         providerId: openAiProvider.id,
+        categoryId: speechCategory.id,
         name: 'OpenAI Accurate',
         modelName: 'gpt-4o-transcribe',
         type: 'TRANSCRIPTION',
@@ -89,6 +114,7 @@ export async function runInitialSeed(
       where: { id: 'google-fast' },
       update: {
         providerId: googleProvider.id,
+        categoryId: speechCategory.id,
         name: 'Google Fast',
         modelName: 'latest_short',
         type: 'TRANSCRIPTION',
@@ -97,6 +123,7 @@ export async function runInitialSeed(
       create: {
         id: 'google-fast',
         providerId: googleProvider.id,
+        categoryId: speechCategory.id,
         name: 'Google Fast',
         modelName: 'latest_short',
         type: 'TRANSCRIPTION',
@@ -106,6 +133,7 @@ export async function runInitialSeed(
       where: { id: 'google-accurate' },
       update: {
         providerId: googleProvider.id,
+        categoryId: speechCategory.id,
         name: 'Google Accurate',
         modelName: 'latest_long',
         type: 'TRANSCRIPTION',
@@ -114,6 +142,7 @@ export async function runInitialSeed(
       create: {
         id: 'google-accurate',
         providerId: googleProvider.id,
+        categoryId: speechCategory.id,
         name: 'Google Accurate',
         modelName: 'latest_long',
         type: 'TRANSCRIPTION',

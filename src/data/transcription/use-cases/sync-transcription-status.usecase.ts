@@ -12,6 +12,7 @@ import type {
 } from '@app/protocols/transcription/repositories/transcription-job.repository';
 import { TranscriptionStatus } from '@app/domain/transcription/value-objects/transcription-status';
 import { TranscriptionProviderError } from '@app/protocols/transcription/providers/ai-provider';
+import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
 
 @Injectable()
 export class SyncTranscriptionStatusUseCase {
@@ -26,6 +27,19 @@ export class SyncTranscriptionStatusUseCase {
     private readonly providerFactory: ProviderFactory,
     private readonly fileService: FileService,
   ) {}
+
+  private isWhisperRabbitJob(responses: unknown): boolean {
+    if (!responses || typeof responses !== 'object' || Array.isArray(responses)) {
+      return false;
+    }
+    const r = responses as Record<string, unknown>;
+    if (r.transport === 'rabbitmq') return true;
+    const legacy = r.whisperMq;
+    if (!legacy || typeof legacy !== 'object' || Array.isArray(legacy)) {
+      return false;
+    }
+    return (legacy as Record<string, unknown>).transport === 'rabbitmq';
+  }
 
   private resolveExternalJobId(job: {
     externalJobId?: string | null;
@@ -42,7 +56,7 @@ export class SyncTranscriptionStatusUseCase {
   async execute(input: { transcriptionJobId: string }) {
     const job = await this.jobRepository.findById(input.transcriptionJobId);
     if (!job) return;
-    if (job.provider !== 'TRANSCRIBE_SERVICES') return;
+    if (job.provider !== ProviderName.TRANSCRIBE_SERVICES) return;
     const externalJobId = this.resolveExternalJobId(job);
     if (!externalJobId) return;
     if (
@@ -52,13 +66,20 @@ export class SyncTranscriptionStatusUseCase {
       return;
     }
 
+    if (this.isWhisperRabbitJob(job.responses)) {
+      await this.jobRepository.updateStatus(job.id, job.status, {
+        lastStatusCheckAt: new Date(),
+      });
+      return;
+    }
+
     await this.jobRepository.updateStatus(job.id, job.status, {
       lastStatusCheckAt: new Date(),
       attemptsIncrement: true,
     });
 
     const provider = await this.db.provider.findFirst({
-      where: { name: 'TRANSCRIBE_SERVICES' },
+      where: { name: ProviderName.TRANSCRIBE_SERVICES },
       select: { id: true },
     });
     if (!provider) return;
@@ -67,7 +88,7 @@ export class SyncTranscriptionStatusUseCase {
       provider.id,
     );
     const client = this.providerFactory.create(
-      'TRANSCRIBE_SERVICES',
+      ProviderName.TRANSCRIBE_SERVICES,
       credential?.apiKey ?? '',
     );
     if (!client.fetchExternalJobStatus) return;

@@ -120,12 +120,17 @@ model SystemConfig {
 
 enum ProviderName {
   OPENAI
-  GOOGLE_SPEECH
+  GOOGLE
   TRANSCRIBE_SERVICES
 }
 
 enum AiModelType {
   TRANSCRIPTION
+}
+
+enum IaCategoryKind {
+  TEXT_GENERATION  @map("text_generation")
+  AUDIO_AND_SPEECH @map("audio_and_speech")
 }
 
 enum TranscriptionStatus {
@@ -135,12 +140,25 @@ enum TranscriptionStatus {
   FAILED
 }
 
+model IaCategory {
+  id        String         @id @default(uuid())
+  name      String
+  tipo      IaCategoryKind @map("tipo") @default(TEXT_GENERATION)
+  createdAt DateTime       @default(now()) @map("created_at")
+  updatedAt DateTime       @updatedAt @map("updated_at")
+
+  models AiModel[]
+
+  @@map("ia_categories")
+}
+
 model Provider {
-  id        String       @id @default(uuid())
-  name      ProviderName @unique
-  isActive  Boolean      @default(true) @map("is_active")
-  createdAt DateTime     @default(now()) @map("created_at")
-  updatedAt DateTime     @updatedAt @map("updated_at")
+  id          String       @id @default(uuid())
+  name        ProviderName @unique
+  displayName String?      @map("display_name")
+  isActive    Boolean      @default(true) @map("is_active")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
 
   credentials ProviderCredential[]
   models      AiModel[]
@@ -168,16 +186,23 @@ model ProviderCredential {
 model AiModel {
   id         String      @id @default(uuid())
   providerId String      @map("provider_id")
+  categoryId String?     @map("category_id")
   name       String
   modelName  String      @map("model_name")
-  type       AiModelType @default(TRANSCRIPTION)
+  subtitle   String?     @db.Text
+  textTooltip String?    @map("text_tooltip") @db.Text
+  urlIcone     String? @map("url_icone")
+  iconFileName String? @map("icon_file_name")
+  type         AiModelType @default(TRANSCRIPTION)
   isActive   Boolean     @default(true) @map("is_active")
   createdAt  DateTime    @default(now()) @map("created_at")
   updatedAt  DateTime    @updatedAt @map("updated_at")
 
-  provider   Provider               @relation(fields: [providerId], references: [id], onDelete: Cascade)
-  usageLogs  AiUsageLog[]
+  provider Provider    @relation(fields: [providerId], references: [id], onDelete: Cascade)
+  category IaCategory? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  usageLogs AiUsageLog[]
 
+  @@index([categoryId])
   @@map("ai_models")
 }
 

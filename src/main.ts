@@ -1,6 +1,8 @@
 import 'dotenv/config';
 
 import { getConfigEnv } from '@app/config';
+import { existsSync, mkdirSync } from 'fs';
+import { join } from 'path';
 
 const configEnv = getConfigEnv();
 if (!process.env.DATABASE_URL?.trim()) {
@@ -12,8 +14,14 @@ import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from '@app/main/app.module';
 import { NestExpressApplication } from '@nestjs/platform-express';
 
+const aiModelIconsDir = join(process.cwd(), 'public', 'ai-model-icons');
+if (!existsSync(aiModelIconsDir)) {
+  mkdirSync(aiModelIconsDir, { recursive: true });
+}
+
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  app.useStaticAssets(join(process.cwd(), 'public'), { prefix: '/public/' });
   const httpAdapter = app.getHttpAdapter().getInstance();
   httpAdapter.set('etag', false);
   httpAdapter.use(
