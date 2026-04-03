@@ -21,7 +21,7 @@ export class PrismaDatabaseAdapter
 
   async onModuleDestroy() {
     await this.$disconnect();
-    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access -- pg.Pool#end (exports condicionais do pacote pg) */
+    /* eslint-disable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
     await this.pool.end();
     /* eslint-enable @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   }

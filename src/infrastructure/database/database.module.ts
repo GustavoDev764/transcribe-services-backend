@@ -12,7 +12,7 @@ import type { IEnvConfig } from '@app/config/env.interface';
     {
       provide: PrismaDatabaseAdapter,
       useFactory: (config: IEnvConfig) => {
-        /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call -- pg.Pool (exports condicionais do pacote pg) */
+        /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
         const pool = new Pool({ connectionString: config.DATABASE_URL });
         /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call */
         const adapter = new PrismaPg(pool);

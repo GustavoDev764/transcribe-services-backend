@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -8,8 +5,6 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
-
-// ============ USUÁRIOS E AUTENTICAÇÃO ============
 
 enum UserProfile {
   CLIENT
@@ -22,7 +17,7 @@ model User {
   passwordHash  String   @map("password_hash")
   name          String
   profile       UserProfile @default(CLIENT)
-  permissions   String[] @default([]) // ["folder:write", "upload:write", "generate_srt:write"]
+  permissions   String[] @default([])
   isActive      Boolean  @default(true) @map("is_active")
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
@@ -34,8 +29,6 @@ model User {
 
   @@map("users")
 }
-
-// ============ PASTAS E ARQUIVOS ============
 
 model Folder {
   id        String   @id @default(uuid())
@@ -52,9 +45,9 @@ model Folder {
 }
 
 enum TranscriptionMode {
-  CHITA    // Mais rápido
-  GOLFINHO // Equilibrado
-  BALEIA   // Maior precisão
+  CHITA
+  GOLFINHO
+  BALEIA
 }
 
 enum FileTranscriptionStatus {
@@ -85,16 +78,16 @@ model UploadBatch {
 model File {
   id                  String            @id @default(uuid())
   originalName        String            @map("original_name")
-  urlFile             String            @map("url_file") // URL de download do arquivo
-  storageExt          String            @map("storage_ext") // Extensão real no storage
+  urlFile             String            @map("url_file")
+  storageExt          String            @map("storage_ext")
   isFavorite          Boolean           @default(false) @map("is_favorite")
-  duration            Int?              // Duração em segundos
+  duration            Int?
   mode                TranscriptionMode @default(GOLFINHO)
-  language            String            @default("pt-BR") // pt-BR, en, ja, etc
-  transcriptionText   String?           @map("transcription_text") // Texto SRT salvo no DB após transcrição
+  language            String            @default("pt-BR")
+  transcriptionText   String?           @map("transcription_text")
   transcriptionStatus FileTranscriptionStatus @default(PENDING) @map("transcription_status")
   userId              String            @map("user_id")
-  folderId            String?           @map("folder_id") // Apenas organização no DB (sem diretório físico)
+  folderId            String?           @map("folder_id")
   batchId             String?           @map("batch_id")
   createdAt           DateTime          @default(now()) @map("created_at")
   updatedAt           DateTime          @updatedAt @map("updated_at")
@@ -106,30 +99,24 @@ model File {
   @@map("files")
 }
 
-// ============ EMAIL TEMPLATES ============
-
 model EmailTemplate {
   id          String   @id @default(uuid())
-  name        String   // Nome identificador (ex: "Reset de senha")
+  name        String
   subject     String
-  bodyHtml    String   @map("body_html") // HTML do template com placeholders {{nome}}, {{link}}, etc.
-  bodyText    String?  @map("body_text") // Versão texto puro
+  bodyHtml    String   @map("body_html")
+  bodyText    String?  @map("body_text")
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   @@map("email_templates")
 }
 
-// ============ CONFIGURAÇÕES DO SISTEMA ============
-
 model SystemConfig {
   id    String @id
-  value String // JSON ou valor simples
+  value String
 
   @@map("system_configs")
 }
-
-// ============ TRANSCRIPTION DDD ============
 
 enum ProviderName {
   OPENAI
@@ -258,6 +245,4 @@ model AiUsageLog {
 
   @@map("ai_usage_logs")
 }
-
-
 

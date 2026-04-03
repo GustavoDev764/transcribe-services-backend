@@ -2,139 +2,51 @@ import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
-import * as bcrypt from 'bcrypt';
-import { resolveDatabaseUrl } from './database-url.js';
-
-const connectionString = resolveDatabaseUrl();
-const pool = new Pool({ connectionString });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+import { resolveDatabaseUrl } from './database-url';
+import { runInitialSeed } from '../src/data/initial-seed/initial-seed.runner';
+import { SYSTEM_CONFIG_KEYS } from '../src/data/system-config/system-config-keys';
 
 async function main() {
-  const managerEmail = process.env.MANAGER_EMAIL || 'gustavojose321@gmail.com';
-  const managerPassword = process.env.MANAGER_PASSWORD || 'react8129';
+  const managerEmail = process.env.MANAGER_EMAIL?.trim() ?? '';
+  const managerPassword = process.env.MANAGER_PASSWORD?.trim() ?? '';
 
-  const hash = await bcrypt.hash(managerPassword, 10);
+  if (managerEmail === '' || managerPassword === '') {
+    console.log(
+      'Seed ignorado: defina MANAGER_EMAIL e MANAGER_PASSWORD no ambiente.',
+    );
+    return;
+  }
 
-  const manager = await prisma.user.upsert({
-    where: { email: managerEmail },
-    update: { passwordHash: hash, name: 'Gustavo' },
-    create: {
-      email: managerEmail,
-      passwordHash: hash,
-      name: 'Gustavo',
-      profile: 'MANAGER',
-      permissions: [
-        'folder:write',
-        'upload:write',
-        'generate_srt:write',
-        'manage:users',
-        'manage:ai',
-      ],
-    },
-  });
+  const connectionString = resolveDatabaseUrl();
+  const pool = new Pool({ connectionString });
+  const adapter = new PrismaPg(pool);
+  const prisma = new PrismaClient({ adapter });
 
-  console.log('Manager criado:', manager.email);
+  try {
+    await runInitialSeed(prisma, { managerEmail, managerPassword });
 
-  const openAiProvider = await prisma.provider.upsert({
-    where: { name: 'OPENAI' },
-    update: {},
-    create: { name: 'OPENAI' },
-  });
-  const googleProvider = await prisma.provider.upsert({
-    where: { name: 'GOOGLE_SPEECH' },
-    update: {},
-    create: { name: 'GOOGLE_SPEECH' },
-  });
+    const key = SYSTEM_CONFIG_KEYS.INITIAL_SEED_COMPLETED;
+    const existing = await prisma.systemConfig.findUnique({ where: { id: key } });
+    if (!existing) {
+      await prisma.systemConfig.create({
+        data: {
+          id: key,
+          value: JSON.stringify({
+            completedAt: new Date().toISOString(),
+            source: 'prisma-cli',
+          }),
+        },
+      });
+    }
 
-  await prisma.provider.upsert({
-    where: { name: 'TRANSCRIBE_SERVICES' },
-    update: {},
-    create: { name: 'TRANSCRIBE_SERVICES', isActive: false },
-  });
-
-  await Promise.all([
-    prisma.aiModel.upsert({
-      where: { id: 'openai-fast' },
-      update: {
-        providerId: openAiProvider.id,
-        name: 'OpenAI Fast',
-        modelName: 'gpt-4o-mini-transcribe',
-        type: 'TRANSCRIPTION',
-        isActive: true,
-      },
-      create: {
-        id: 'openai-fast',
-        providerId: openAiProvider.id,
-        name: 'OpenAI Fast',
-        modelName: 'gpt-4o-mini-transcribe',
-        type: 'TRANSCRIPTION',
-      },
-    }),
-    prisma.aiModel.upsert({
-      where: { id: 'openai-accurate' },
-      update: {
-        providerId: openAiProvider.id,
-        name: 'OpenAI Accurate',
-        modelName: 'gpt-4o-transcribe',
-        type: 'TRANSCRIPTION',
-        isActive: true,
-      },
-      create: {
-        id: 'openai-accurate',
-        providerId: openAiProvider.id,
-        name: 'OpenAI Accurate',
-        modelName: 'gpt-4o-transcribe',
-        type: 'TRANSCRIPTION',
-      },
-    }),
-  ]);
-
-  await Promise.all([
-    prisma.aiModel.upsert({
-      where: { id: 'google-fast' },
-      update: {
-        providerId: googleProvider.id,
-        name: 'Google Fast',
-        modelName: 'latest_short',
-        type: 'TRANSCRIPTION',
-        isActive: true,
-      },
-      create: {
-        id: 'google-fast',
-        providerId: googleProvider.id,
-        name: 'Google Fast',
-        modelName: 'latest_short',
-        type: 'TRANSCRIPTION',
-      },
-    }),
-    prisma.aiModel.upsert({
-      where: { id: 'google-accurate' },
-      update: {
-        providerId: googleProvider.id,
-        name: 'Google Accurate',
-        modelName: 'latest_long',
-        type: 'TRANSCRIPTION',
-        isActive: true,
-      },
-      create: {
-        id: 'google-accurate',
-        providerId: googleProvider.id,
-        name: 'Google Accurate',
-        modelName: 'latest_long',
-        type: 'TRANSCRIPTION',
-      },
-    }),
-  ]);
-
-}
-
-main()
-  .catch((e) => {
-    console.error(e);
-    process.exit(1);
-  })
-  .finally(async () => {
+    console.log('Manager e dados iniciais aplicados.');
+  } finally {
     await prisma.$disconnect();
     await pool.end();
-  });
+  }
+}
+
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

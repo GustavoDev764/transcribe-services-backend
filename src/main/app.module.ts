@@ -13,6 +13,7 @@ import { AuthModule } from '@app/main/modules/auth.module';
 import { EmailTemplateModule } from '@app/main/modules/email-template.module';
 import { FileModule } from '@app/main/modules/file.module';
 import { FolderModule } from '@app/main/modules/folder.module';
+import { InitialSeedModule } from '@app/main/modules/initial-seed.module';
 import { SystemConfigModule } from '@app/main/modules/system-config.module';
 import { TranscriptionModule } from '@app/main/modules/transcription.module';
 import { TranslateModule } from '@app/main/modules/translate.module';
@@ -49,6 +50,7 @@ import { TranslateModule } from '@app/main/modules/translate.module';
     AdminModule,
     EmailTemplateModule,
     SystemConfigModule,
+    InitialSeedModule,
   ],
   controllers: [AppController],
   providers: [

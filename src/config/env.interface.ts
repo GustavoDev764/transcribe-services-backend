@@ -33,6 +33,8 @@ export interface IEnvConfig {
 
   MANAGER_PASSWORD: string;
 
+  INITIAL_SEED_SECRET: string;
+
   GOOGLE_TRANSLATE_CREDENTIALS_KEY: string;
 
   GOOGLE_TRANSLATE_BASE: string;
