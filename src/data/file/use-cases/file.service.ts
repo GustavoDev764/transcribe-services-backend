@@ -168,7 +168,11 @@ export class FileService {
         userId,
         folderId: options.folderId,
         mode: options.mode || 'GOLFINHO',
-        language: options.language || 'pt-BR',
+        language: (() => {
+          const t = options.language?.trim();
+          if (t === 'auto') return 'auto';
+          return t || 'pt-BR';
+        })(),
         batchId: options.batchId,
         transcriptionStatus: FileTranscriptionStatus.NOT_STARTED,
       },
@@ -478,10 +482,8 @@ export class FileService {
       where: { isActive: true },
       select: { name: true },
     });
-    if (
-      active.length !== 1 ||
-      active[0].name !== ProviderName.TRANSCRIBE_SERVICES
-    )
+    if (active.length !== 1) return;
+    if ((active[0].name as ProviderName) !== ProviderName.TRANSCRIBE_SERVICES)
       return;
 
     const minLastCheckBefore = new Date(
@@ -765,7 +767,6 @@ export class FileService {
     }
   }
 
-  /** Stream do binário no storage (ex.: worker Whisper com URL assinada). Não valida userId. */
   async getInternalStorageReadStream(fileId: string): Promise<{
     stream: ReturnType<typeof createReadStream>;
     originalName: string;

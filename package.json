@@ -35,7 +35,7 @@
     "seed": "npx ts-node --project prisma/tsconfig.seed.json prisma/seed.ts"
   },
   "dependencies": {
-    "@google-cloud/speech": "^7.2.1",
+    "@elevenlabs/elevenlabs-js": "^2.41.1",
     "@google-cloud/translate": "^9.3.0",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",

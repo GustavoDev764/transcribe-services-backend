@@ -18,7 +18,6 @@ export class TranscriptionJobEntity {
     public status: TranscriptionStatus,
     public providerAttempts: ProviderAttempt[] = [],
     public resultUrl?: string | null,
-    public resultText?: string | null,
     public errorMessage?: string | null,
   ) {}
 
@@ -26,10 +25,9 @@ export class TranscriptionJobEntity {
     this.status = TranscriptionStatus.PROCESSING;
   }
 
-  markSuccess(resultUrl: string, resultText?: string | null) {
+  markSuccess(resultUrl: string) {
     this.status = TranscriptionStatus.SUCCESS;
     this.resultUrl = resultUrl;
-    this.resultText = resultText ?? null;
     this.errorMessage = null;
   }
 

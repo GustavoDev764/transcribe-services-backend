@@ -33,7 +33,6 @@ export async function runInitialSeed(
     },
   });
 
-  /** Categoria tipo text_generation: modelos listados no cliente para escolha de transcrição. */
   const speechCategory = await db.iaCategory.upsert({
     where: { id: IA_CATEGORY_SPEECH_TO_TEXT_ID },
     update: {
@@ -52,10 +51,10 @@ export async function runInitialSeed(
     update: { displayName: 'OpenIA' },
     create: { name: ProviderName.OPENAI, displayName: 'OpenIA' },
   });
-  const googleProvider = await db.provider.upsert({
-    where: { name: ProviderName.GOOGLE },
-    update: { displayName: 'Google' },
-    create: { name: ProviderName.GOOGLE, displayName: 'Google' },
+  const elevenlabsProvider = await db.provider.upsert({
+    where: { name: ProviderName.ELEVENLABS },
+    update: { displayName: 'ElevenLabs' },
+    create: { name: ProviderName.ELEVENLABS, displayName: 'ElevenLabs' },
   });
 
   await db.provider.upsert({
@@ -113,38 +112,38 @@ export async function runInitialSeed(
     db.aiModel.upsert({
       where: { id: 'google-fast' },
       update: {
-        providerId: googleProvider.id,
+        providerId: elevenlabsProvider.id,
         categoryId: speechCategory.id,
-        name: 'Google Fast',
-        modelName: 'latest_short',
+        name: 'ElevenLabs Scribe v2',
+        modelName: 'scribe_v2',
         type: 'TRANSCRIPTION',
         isActive: true,
       },
       create: {
         id: 'google-fast',
-        providerId: googleProvider.id,
+        providerId: elevenlabsProvider.id,
         categoryId: speechCategory.id,
-        name: 'Google Fast',
-        modelName: 'latest_short',
+        name: 'ElevenLabs Scribe v2',
+        modelName: 'scribe_v2',
         type: 'TRANSCRIPTION',
       },
     }),
     db.aiModel.upsert({
       where: { id: 'google-accurate' },
       update: {
-        providerId: googleProvider.id,
+        providerId: elevenlabsProvider.id,
         categoryId: speechCategory.id,
-        name: 'Google Accurate',
-        modelName: 'latest_long',
+        name: 'ElevenLabs Scribe v1',
+        modelName: 'scribe_v1',
         type: 'TRANSCRIPTION',
         isActive: true,
       },
       create: {
         id: 'google-accurate',
-        providerId: googleProvider.id,
+        providerId: elevenlabsProvider.id,
         categoryId: speechCategory.id,
-        name: 'Google Accurate',
-        modelName: 'latest_long',
+        name: 'ElevenLabs Scribe v1',
+        modelName: 'scribe_v1',
         type: 'TRANSCRIPTION',
       },
     }),

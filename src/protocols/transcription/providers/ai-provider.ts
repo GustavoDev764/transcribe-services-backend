@@ -6,6 +6,10 @@ export type TranscriptionInput = {
   language?: string;
   fileBuffer?: Buffer;
   fileName?: string;
+
+  diarize?: boolean;
+
+  diarizeSpeakerCount?: number | null;
 };
 
 export type TranscriptionOutput = {

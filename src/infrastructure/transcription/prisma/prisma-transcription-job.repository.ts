@@ -20,6 +20,8 @@ export class PrismaTranscriptionJobRepository implements TranscriptionJobReposit
     provider?: string | null;
     externalJobId?: string | null;
     preferredModel?: string | null;
+    diarizeEnabled?: boolean;
+    diarizeSpeakerCount?: number | null;
   }): Promise<TranscriptionJobRecord> {
     const job = await this.db.transcriptionJob.create({
       data: {
@@ -28,6 +30,8 @@ export class PrismaTranscriptionJobRepository implements TranscriptionJobReposit
         provider: data.provider ?? null,
         externalJobId: data.externalJobId ?? null,
         preferredModel: data.preferredModel ?? null,
+        diarizeEnabled: data.diarizeEnabled ?? false,
+        diarizeSpeakerCount: data.diarizeSpeakerCount ?? null,
         status: TranscriptionStatus.PENDING,
         providerAttempts: [],
       },
@@ -39,11 +43,12 @@ export class PrismaTranscriptionJobRepository implements TranscriptionJobReposit
       provider: job.provider,
       externalJobId: job.externalJobId,
       preferredModel: job.preferredModel,
+      diarizeEnabled: job.diarizeEnabled,
+      diarizeSpeakerCount: job.diarizeSpeakerCount,
       status: job.status as TranscriptionStatus,
       providerAttempts: (job.providerAttempts as ProviderAttempt[]) ?? [],
       responses: job.responses ?? null,
       resultUrl: job.resultUrl,
-      resultText: job.resultText,
       errorMessage: job.errorMessage,
       attempts: job.attempts,
       lastStatusCheckAt: job.lastStatusCheckAt,
@@ -63,11 +68,12 @@ export class PrismaTranscriptionJobRepository implements TranscriptionJobReposit
       provider: job.provider,
       externalJobId: job.externalJobId,
       preferredModel: job.preferredModel,
+      diarizeEnabled: job.diarizeEnabled,
+      diarizeSpeakerCount: job.diarizeSpeakerCount,
       status: job.status as TranscriptionStatus,
       providerAttempts: (job.providerAttempts as ProviderAttempt[]) ?? [],
       responses: job.responses ?? null,
       resultUrl: job.resultUrl,
-      resultText: job.resultText,
       errorMessage: job.errorMessage,
       attempts: job.attempts,
       lastStatusCheckAt: job.lastStatusCheckAt,
@@ -107,7 +113,6 @@ export class PrismaTranscriptionJobRepository implements TranscriptionJobReposit
       providerAttempts?: ProviderAttempt[];
       responses?: unknown;
       resultUrl?: string | null;
-      resultText?: string | null;
       errorMessage?: string | null;
       externalJobId?: string | null;
       provider?: string | null;
@@ -129,7 +134,6 @@ export class PrismaTranscriptionJobRepository implements TranscriptionJobReposit
         providerAttempts: data?.providerAttempts,
         responses: responsesValue,
         resultUrl: data?.resultUrl,
-        resultText: data?.resultText,
         errorMessage: data?.errorMessage,
         provider: data?.provider,
         externalJobId: data?.externalJobId,

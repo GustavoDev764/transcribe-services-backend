@@ -31,6 +31,10 @@ import {
   resolveMqDownloadPublicBase,
   resolveMqDownloadSecret,
 } from '@app/infrastructure/transcription/messaging/mq-download-env';
+import {
+  buildCanonicalTranscriptionResponses,
+  canonicalSegmentsToSrt,
+} from '@app/domain/transcription/services/canonical-transcription-responses';
 
 const OPENAI_MAX_BYTES = 25 * 1024 * 1024;
 const AUDIO_MAX_MB_MESSAGE =
@@ -67,6 +71,26 @@ export class ProcessTranscriptionUseCase {
     return 'small';
   }
 
+  private buildPersistedResponses(
+    rawResponse: unknown,
+    fallbackSrt: string,
+  ): Record<string, unknown> {
+    let responses = buildCanonicalTranscriptionResponses(rawResponse);
+    const segs = responses.segments as Record<string, unknown>[];
+    const fromCanon = canonicalSegmentsToSrt(Array.isArray(segs) ? segs : []);
+    if (!fromCanon.trim() && fallbackSrt.trim()) {
+      const t =
+        (typeof responses.text === 'string' && responses.text.trim()) ||
+        fallbackSrt.trim();
+      responses = {
+        ...responses,
+        text: t,
+        segments: [{ id: 0, start: 0, end: 0, text: t }],
+      };
+    }
+    return responses;
+  }
+
   async execute(input: { jobId: string }) {
     const job = await this.jobRepository.findById(input.jobId);
     if (!job) throw new Error('Job não encontrado');
@@ -76,6 +100,18 @@ export class ProcessTranscriptionUseCase {
       TranscriptionStatus.PROCESSING,
     );
     const fileIdForStatus = this.extractFileId(job.fileUrl);
+    const resolvedFileId = job.fileId ?? fileIdForStatus;
+    let sttLanguage: string | undefined;
+    if (resolvedFileId) {
+      const langRow = await this.db.file.findUnique({
+        where: { id: resolvedFileId },
+        select: { language: true },
+      });
+      const raw = langRow?.language?.trim();
+      if (raw && raw.toLowerCase() !== 'auto') {
+        sttLanguage = raw;
+      }
+    }
     if (fileIdForStatus) {
       await this.fileService.updateTranscriptionStatus(
         fileIdForStatus,
@@ -149,18 +185,30 @@ export class ProcessTranscriptionUseCase {
       return;
     }
 
+    if (activeName === ProviderName.OPENAI && job.diarizeEnabled === true) {
+      await this.runOpenAIDiarizeJob(
+        job,
+        fileIdForStatus,
+        activeProviders[0].id,
+        sttLanguage,
+      );
+      return;
+    }
+
     if (activeName === ProviderName.TRANSCRIBE_SERVICES) {
       await this.runTranscribeServicesJob(
         job,
         fileIdForStatus,
         activeProviders[0].id,
+        sttLanguage,
       );
       return;
     }
 
-    let models = await this.modelRepository.findActiveTextGenerationByProviderId(
-      activeProviders[0].id,
-    );
+    let models =
+      await this.modelRepository.findActiveTextGenerationByProviderId(
+        activeProviders[0].id,
+      );
 
     const preferredId = job.preferredModel?.trim();
     if (preferredId) {
@@ -261,6 +309,9 @@ export class ProcessTranscriptionUseCase {
           modelName: model.modelName,
           fileBuffer,
           fileName,
+          language: sttLanguage,
+          diarize: job.diarizeEnabled === true,
+          diarizeSpeakerCount: job.diarizeSpeakerCount ?? null,
         });
 
         const resultUrl = `/transcriptions/${job.id}/result`;
@@ -273,14 +324,17 @@ export class ProcessTranscriptionUseCase {
           finishedAt: new Date().toISOString(),
         });
 
+        const responses = this.buildPersistedResponses(
+          result.rawResponse ?? null,
+          result.srtContent,
+        );
         await this.jobRepository.updateStatus(
           job.id,
           TranscriptionStatus.SUCCESS,
           {
             providerAttempts: attempts,
             resultUrl,
-            resultText: result.srtContent,
-            responses: result.rawResponse ?? null,
+            responses,
           },
         );
         if (fileIdForStatus) {
@@ -340,6 +394,184 @@ export class ProcessTranscriptionUseCase {
         fileIdForStatus,
         FileTranscriptionStatus.FAILED,
       );
+    }
+  }
+
+  private async runOpenAIDiarizeJob(
+    job: TranscriptionJobRecord,
+    fileIdForStatus: string | null,
+    providerId: string,
+    sttLanguage?: string,
+  ): Promise<void> {
+    const attempts = job.providerAttempts ?? [];
+    const audioModel = await this.db.aiModel.findFirst({
+      where: {
+        providerId,
+        isActive: true,
+        category: { tipo: IaCategoryKind.AUDIO_AND_SPEECH },
+      },
+      orderBy: { createdAt: 'asc' },
+      include: { provider: true },
+    });
+
+    if (!audioModel) {
+      await this.jobRepository.updateStatus(
+        job.id,
+        TranscriptionStatus.FAILED,
+        {
+          errorMessage:
+            'Nenhum modelo de diarização (categoria áudio e fala) configurado para o provedor OpenAI.',
+        },
+      );
+      if (fileIdForStatus) {
+        await this.fileService.updateTranscriptionStatus(
+          fileIdForStatus,
+          FileTranscriptionStatus.FAILED,
+        );
+      }
+      return;
+    }
+
+    const credential =
+      await this.credentialRepository.findBestByProvider(providerId);
+    if (!credential) {
+      await this.jobRepository.updateStatus(
+        job.id,
+        TranscriptionStatus.FAILED,
+        {
+          errorMessage: 'Credenciais não configuradas',
+        },
+      );
+      if (fileIdForStatus) {
+        await this.fileService.updateTranscriptionStatus(
+          fileIdForStatus,
+          FileTranscriptionStatus.FAILED,
+        );
+      }
+      return;
+    }
+
+    const providerName = audioModel.provider.name as ProviderName;
+    const provider: AIProvider = this.providerFactory.create(
+      providerName,
+      credential.apiKey,
+    );
+
+    let fileBuffer: Buffer | undefined;
+    let fileName: string | undefined;
+    if (fileIdForStatus) {
+      try {
+        const resolved =
+          await this.getFileBufferUseCase.execute(fileIdForStatus);
+        fileBuffer = resolved.buffer;
+        fileName = resolved.fileName;
+      } catch {
+        await this.jobRepository.updateStatus(
+          job.id,
+          TranscriptionStatus.FAILED,
+          {
+            errorMessage: 'Arquivo não encontrado no storage',
+          },
+        );
+        if (fileIdForStatus) {
+          await this.fileService.updateTranscriptionStatus(
+            fileIdForStatus,
+            FileTranscriptionStatus.FAILED,
+          );
+        }
+        return;
+      }
+    }
+
+    const startedAt = new Date().toISOString();
+    try {
+      const result = await provider.transcribe({
+        fileUrl: job.fileUrl,
+        modelName: audioModel.modelName,
+        fileBuffer,
+        fileName,
+        language: sttLanguage,
+        diarize: true,
+        diarizeSpeakerCount: job.diarizeSpeakerCount ?? null,
+      });
+
+      const resultUrl = `/transcriptions/${job.id}/result`;
+      attempts.push({
+        providerName,
+        modelId: audioModel.id,
+        credentialId: credential.id,
+        status: 'SUCCESS',
+        startedAt,
+        finishedAt: new Date().toISOString(),
+      });
+
+      const responses = this.buildPersistedResponses(
+        result.rawResponse ?? null,
+        result.srtContent,
+      );
+      await this.jobRepository.updateStatus(
+        job.id,
+        TranscriptionStatus.SUCCESS,
+        {
+          providerAttempts: attempts,
+          resultUrl,
+          responses,
+        },
+      );
+      if (fileIdForStatus) {
+        await this.fileService.updateTranscriptionStatus(
+          fileIdForStatus,
+          FileTranscriptionStatus.SUCCESS,
+        );
+      }
+
+      await this.usageLogRepository.create({
+        providerId: audioModel.providerId,
+        providerCredentialId: credential.id,
+        aiModelId: audioModel.id,
+        tokens: result.tokensUsed ?? null,
+        costTotal: null,
+        status: TranscriptionStatus.SUCCESS,
+      });
+    } catch (err) {
+      const error = err as Error;
+      const errorCode =
+        err instanceof TranscriptionProviderError ? err.code : 'UNKNOWN';
+      attempts.push({
+        providerName,
+        modelId: audioModel.id,
+        credentialId: credential.id,
+        status: 'FAILED',
+        errorCode,
+        errorMessage: error.message,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+      });
+
+      await this.usageLogRepository.create({
+        providerId: audioModel.providerId,
+        providerCredentialId: credential.id,
+        aiModelId: audioModel.id,
+        tokens: null,
+        costTotal: null,
+        status: TranscriptionStatus.FAILED,
+        errorMessage: error.message,
+      });
+
+      await this.jobRepository.updateStatus(
+        job.id,
+        TranscriptionStatus.FAILED,
+        {
+          providerAttempts: attempts,
+          errorMessage: error.message,
+        },
+      );
+      if (fileIdForStatus) {
+        await this.fileService.updateTranscriptionStatus(
+          fileIdForStatus,
+          FileTranscriptionStatus.FAILED,
+        );
+      }
     }
   }
 
@@ -508,6 +740,7 @@ export class ProcessTranscriptionUseCase {
     job: TranscriptionJobRecord,
     fileIdForStatus: string | null,
     providerId: string,
+    sttLanguage?: string,
   ) {
     const attempts = job.providerAttempts ?? [];
     const credential =
@@ -692,6 +925,7 @@ export class ProcessTranscriptionUseCase {
         modelName,
         fileBuffer,
         fileName,
+        language: sttLanguage,
       });
 
       await this.jobRepository.updateStatus(

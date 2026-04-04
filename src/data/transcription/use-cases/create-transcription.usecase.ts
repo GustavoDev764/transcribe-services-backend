@@ -30,6 +30,8 @@ export class CreateTranscriptionUseCase {
     fileId: string;
     preferredAiModelId?: string | null;
     transcribeModel?: 'tiny' | 'base' | 'small' | null;
+    recognizeSpeakers?: boolean;
+    diarizeSpeakerCount?: number;
   }) {
     const active = await this.db.provider.findMany({
       where: { isActive: true },
@@ -64,6 +66,42 @@ export class CreateTranscriptionUseCase {
       );
     }
 
+    let diarizeEnabled = false;
+    let diarizeSpeakerCount: number | null = null;
+    if (input.recognizeSpeakers === true) {
+      if (providerName === ProviderName.OPENAI) {
+        const audioModelCount = await this.db.aiModel.count({
+          where: {
+            providerId: activeProviderId,
+            isActive: true,
+            category: { tipo: IaCategoryKind.AUDIO_AND_SPEECH },
+          },
+        });
+        if (audioModelCount === 0) {
+          throw new BadRequestException(
+            'Cadastre ao menos um modelo ativo na categoria áudio e fala (ex.: gpt-4o-transcribe-diarize) para reconhecer locutores.',
+          );
+        }
+        diarizeEnabled = true;
+        const c = input.diarizeSpeakerCount;
+        diarizeSpeakerCount =
+          typeof c === 'number' && Number.isInteger(c) && c >= 2 && c <= 8
+            ? c
+            : null;
+      } else if (providerName === ProviderName.ELEVENLABS) {
+        diarizeEnabled = true;
+        const c = input.diarizeSpeakerCount;
+        diarizeSpeakerCount =
+          typeof c === 'number' && Number.isInteger(c) && c >= 2 && c <= 32
+            ? c
+            : null;
+      } else {
+        throw new BadRequestException(
+          'Reconhecimento de locutores só está disponível com OpenAI ou ElevenLabs.',
+        );
+      }
+    }
+
     const rawAiModelId = input.preferredAiModelId?.trim();
     let preferredModel: string | null = null;
 
@@ -84,8 +122,7 @@ export class CreateTranscriptionUseCase {
       preferredModel = rawAiModelId;
     } else if (providerName === ProviderName.TRANSCRIBE_SERVICES) {
       const w = rawWhisper ?? '';
-      preferredModel =
-        w && ['tiny', 'base', 'small'].includes(w) ? w : 'small';
+      preferredModel = w && ['tiny', 'base', 'small'].includes(w) ? w : 'small';
     }
 
     const job = await this.jobRepository.create({
@@ -93,6 +130,8 @@ export class CreateTranscriptionUseCase {
       fileUrl: input.fileUrl,
       provider: providerName,
       preferredModel,
+      diarizeEnabled,
+      diarizeSpeakerCount,
     });
 
     await this.fileService.updateTranscriptionStatus(

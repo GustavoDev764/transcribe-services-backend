@@ -25,6 +25,7 @@ import { SystemConfigService } from '@app/data/system-config/use-cases/system-co
 import { SYSTEM_CONFIG_KEYS } from '@app/data/system-config/system-config-keys';
 import { mergeTranscribeModelUiFromJson } from '@app/data/transcription/transcribe-model-ui';
 import { IaCategoryKind } from '@prisma/client';
+import { srtFromStoredResponses } from '@app/domain/transcription/services/canonical-transcription-responses';
 
 @Controller('transcriptions')
 @UseGuards(JwtAuthGuard)
@@ -89,11 +90,24 @@ export class TranscriptionController {
       }));
     }
 
+    const diarizeOpenAiEnabled =
+      name === ProviderName.OPENAI && single
+        ? (await this.db.aiModel.count({
+            where: {
+              providerId: single.id,
+              isActive: true,
+              category: { tipo: IaCategoryKind.AUDIO_AND_SPEECH },
+            },
+          })) > 0
+        : false;
+
     return {
       active_provider: name,
       transcribe_services_enabled: name === ProviderName.TRANSCRIBE_SERVICES,
       openai_enabled: name === ProviderName.OPENAI,
-      google_speech_enabled: name === ProviderName.GOOGLE,
+      elevenlabs_enabled: name === ProviderName.ELEVENLABS,
+      diarize_openai_enabled: diarizeOpenAiEnabled,
+      diarize_elevenlabs_enabled: name === ProviderName.ELEVENLABS,
       transcribe_model_ui,
       transcription_models,
     };
@@ -107,6 +121,8 @@ export class TranscriptionController {
       fileId: dto.file_id,
       preferredAiModelId: dto.preferred_ai_model_id ?? null,
       transcribeModel: dto.transcribe_model ?? null,
+      recognizeSpeakers: dto.recognize_speakers === true,
+      diarizeSpeakerCount: dto.diarize_speaker_count,
     });
   }
 
@@ -127,10 +143,11 @@ export class TranscriptionController {
   @Get(':id/result')
   async downloadResult(@Param('id') id: string): Promise<StreamableFile> {
     const job = await this.jobRepository.findById(id);
-    if (!job || !job.resultText) {
+    const srt = srtFromStoredResponses(job?.responses);
+    if (!job || !srt) {
       throw new NotFoundException('Resultado não disponível');
     }
-    const stream = Readable.from([job.resultText]);
+    const stream = Readable.from([srt]);
     return new StreamableFile(stream, {
       type: 'text/plain',
       disposition: `attachment; filename="transcription-${id}.srt"`,

@@ -4,7 +4,7 @@ import type { IEnvConfig } from '@app/config/env.interface';
 import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
 import { AIProvider } from '@app/protocols/transcription/providers/ai-provider';
 import { OpenAIProvider } from '@app/infrastructure/transcription/providers/openai.provider';
-import { GoogleProvider } from '@app/infrastructure/transcription/providers/google.provider';
+import { ElevenLabsProvider } from '@app/infrastructure/transcription/providers/elevenlabs.provider';
 import { TranscribeServicesProvider } from '@app/infrastructure/transcription/providers/transcribe-services.provider';
 
 @Injectable()
@@ -15,13 +15,14 @@ export class ProviderFactory {
     if (providerName === ProviderName.OPENAI) {
       return new OpenAIProvider(apiKey);
     }
-    if (providerName === ProviderName.GOOGLE) {
-      return new GoogleProvider();
+    if (providerName === ProviderName.ELEVENLABS) {
+      return new ElevenLabsProvider(apiKey);
     }
     if (providerName === ProviderName.TRANSCRIBE_SERVICES) {
       const mq = this.config.RABBITMQ_URL?.trim();
       if (mq) {
-        const host = this.config.TRANSCRIBE_HOST?.trim() || 'http://127.0.0.1:1';
+        const host =
+          this.config.TRANSCRIBE_HOST?.trim() || 'http://127.0.0.1:1';
         return new TranscribeServicesProvider(host, apiKey ?? '');
       }
       const host = this.config.TRANSCRIBE_HOST?.trim();

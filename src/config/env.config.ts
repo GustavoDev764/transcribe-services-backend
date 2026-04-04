@@ -65,7 +65,10 @@ export function loadConfigEnv(): IEnvConfig {
     RABBITMQ_URL: env('RABBITMQ_URL', env('WHISPER_RABBITMQ_URL', '')),
     WHISPER_JOBS_QUEUE: env('WHISPER_JOBS_QUEUE', 'nest_whisper_jobs'),
     WHISPER_STATUS_QUEUE: env('WHISPER_STATUS_QUEUE', 'nest_whisper_status'),
-    TRANSCRIPTION_SHARED_STORAGE_PATH: env('TRANSCRIPTION_SHARED_STORAGE_PATH', ''),
+    TRANSCRIPTION_SHARED_STORAGE_PATH: env(
+      'TRANSCRIPTION_SHARED_STORAGE_PATH',
+      '',
+    ),
     PUBLIC_APP_URL: env('PUBLIC_APP_URL', ''),
     WHISPER_MQ_DOWNLOAD_SECRET: env('WHISPER_MQ_DOWNLOAD_SECRET', ''),
     WHISPER_MQ_DOWNLOAD_TTL_SEC: Math.min(
@@ -77,7 +80,6 @@ export function loadConfigEnv(): IEnvConfig {
 
 export const APP_CONFIG = Symbol('APP_CONFIG');
 
-/** Se não for null, getConfigEnv() devolve isto (testes). Caso contrário, lê process.env de novo. */
 let testConfigOverride: IEnvConfig | null = null;
 
 export function getConfigEnv(): IEnvConfig {

@@ -51,8 +51,7 @@ export class InitialSeedService {
 
     const email =
       opts?.managerEmail?.trim() || this.config.MANAGER_EMAIL.trim();
-    const password =
-      opts?.managerPassword ?? this.config.MANAGER_PASSWORD;
+    const password = opts?.managerPassword ?? this.config.MANAGER_PASSWORD;
 
     if (email === '' || password.trim() === '') {
       throw new BadRequestException(

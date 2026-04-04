@@ -9,11 +9,12 @@ export type TranscriptionJobRecord = {
   provider?: string | null;
   externalJobId?: string | null;
   preferredModel?: string | null;
+  diarizeEnabled?: boolean;
+  diarizeSpeakerCount?: number | null;
   status: TranscriptionStatus;
   providerAttempts: ProviderAttempt[];
   responses?: unknown;
   resultUrl?: string | null;
-  resultText?: string | null;
   errorMessage?: string | null;
   attempts?: number;
   lastStatusCheckAt?: Date | null;
@@ -29,6 +30,8 @@ export interface TranscriptionJobRepository {
     provider?: string | null;
     externalJobId?: string | null;
     preferredModel?: string | null;
+    diarizeEnabled?: boolean;
+    diarizeSpeakerCount?: number | null;
   }): Promise<TranscriptionJobRecord>;
   findById(id: string): Promise<TranscriptionJobRecord | null>;
   findPendingExternalSyncJobsByFileIds(
@@ -42,7 +45,6 @@ export interface TranscriptionJobRepository {
       providerAttempts?: ProviderAttempt[];
       responses?: unknown;
       resultUrl?: string | null;
-      resultText?: string | null;
       errorMessage?: string | null;
       externalJobId?: string | null;
       provider?: string | null;
@@ -63,7 +65,6 @@ export interface AiModelRepository {
     }>
   >;
 
-  /** Modelos ativos do provider com categoria IA tipo text_generation. */
   findActiveTextGenerationByProviderId(providerId: string): Promise<
     Array<{
       id: string;

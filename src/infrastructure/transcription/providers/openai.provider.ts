@@ -14,7 +14,18 @@ import {
 export class OpenAIProvider implements AIProvider {
   constructor(private readonly apiKey: string) {}
 
+  private openAiLanguageHint(code?: string): string | undefined {
+    const t = code?.trim();
+    if (!t) return undefined;
+    const two = t.split(/[-_]/)[0]?.toLowerCase();
+    return two && two.length >= 2 ? two : undefined;
+  }
+
   async transcribe(input: TranscriptionInput): Promise<TranscriptionOutput> {
+    if (input.diarize) {
+      return this.transcribeDiarized(input);
+    }
+
     const openai = new OpenAI({ apiKey: this.apiKey });
     const buffer = input.fileBuffer ?? (await this.downloadFile(input.fileUrl));
     const fileInstance = this.buildFile(
@@ -26,6 +37,7 @@ export class OpenAIProvider implements AIProvider {
       const responseFormat = input.modelName.startsWith('gpt-4o')
         ? 'json'
         : 'verbose_json';
+      const lang = this.openAiLanguageHint(input.language);
       const response = await openai.audio.transcriptions.create({
         file: fileInstance,
         model: input.modelName,
@@ -33,6 +45,7 @@ export class OpenAIProvider implements AIProvider {
         ...(responseFormat === 'verbose_json'
           ? { timestamp_granularities: ['segment'] }
           : {}),
+        ...(lang ? { language: lang } : {}),
       });
 
       const payload = response as {
@@ -50,6 +63,64 @@ export class OpenAIProvider implements AIProvider {
         srtContent,
         tokensUsed: this.estimateTokens(text),
         rawResponse: JSON.parse(JSON.stringify(response)),
+      };
+    } catch (err) {
+      throw new TranscriptionProviderError(
+        err instanceof Error ? err.message : 'Erro OpenAI',
+        this.mapErrorCode(err),
+      );
+    }
+  }
+
+  private async transcribeDiarized(
+    input: TranscriptionInput,
+  ): Promise<TranscriptionOutput> {
+    const openai = new OpenAI({ apiKey: this.apiKey });
+    const buffer = input.fileBuffer ?? (await this.downloadFile(input.fileUrl));
+    const fileInstance = this.buildFile(
+      buffer,
+      input.fileName || input.fileUrl,
+    );
+
+    try {
+      const langD = this.openAiLanguageHint(input.language);
+      const response = await openai.audio.transcriptions.create({
+        file: fileInstance,
+        model: input.modelName,
+        response_format: 'diarized_json',
+        chunking_strategy: 'auto',
+        ...(langD ? { language: langD } : {}),
+      });
+
+      const payload = response as {
+        text?: string;
+        segments?: Array<{
+          start: number;
+          end: number;
+          text: string;
+          speaker: string;
+        }>;
+      };
+      const segments = payload.segments ?? [];
+      const text =
+        payload.text?.trim() ||
+        segments.map((s) => `${s.speaker}: ${s.text.trim()}`).join('\n');
+      const srtContent = segments.length
+        ? this.diarizedSegmentsToSrt(segments)
+        : this.singleSegmentSrt(text);
+
+      const rawResponse = JSON.parse(JSON.stringify(response)) as Record<
+        string,
+        unknown
+      >;
+      rawResponse.client_requested_speaker_count =
+        input.diarizeSpeakerCount ?? null;
+
+      return {
+        text,
+        srtContent,
+        tokensUsed: this.estimateTokens(text),
+        rawResponse,
       };
     } catch (err) {
       throw new TranscriptionProviderError(
@@ -101,6 +172,24 @@ export class OpenAIProvider implements AIProvider {
         const start = this.formatSrtTime(seg.start);
         const end = this.formatSrtTime(seg.end);
         return `${i + 1}\n${start} --> ${end}\n${seg.text.trim()}\n`;
+      })
+      .join('\n');
+  }
+
+  private diarizedSegmentsToSrt(
+    segments: Array<{
+      start: number;
+      end: number;
+      text: string;
+      speaker: string;
+    }>,
+  ) {
+    return segments
+      .map((seg, i) => {
+        const start = this.formatSrtTime(seg.start);
+        const end = this.formatSrtTime(seg.end);
+        const label = (seg.speaker || '?').trim();
+        return `${i + 1}\n${start} --> ${end}\n${label}: ${seg.text.trim()}\n`;
       })
       .join('\n');
   }

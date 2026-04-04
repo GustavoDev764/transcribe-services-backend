@@ -21,7 +21,9 @@ function displayNameFromOriginal(originalname: string): string {
 }
 
 function isLikelySvg(buffer: Buffer): boolean {
-  const head = buffer.subarray(0, Math.min(256, buffer.length)).toString('utf8');
+  const head = buffer
+    .subarray(0, Math.min(256, buffer.length))
+    .toString('utf8');
   return /^\s*(<\?xml|<svg\b)/i.test(head);
 }
 
@@ -53,7 +55,9 @@ export class AiModelIconUploadService {
         throw new BadRequestException('Não foi possível ler a imagem');
       }
       if (!dimensions.width || !dimensions.height) {
-        throw new BadRequestException('Não foi possível obter dimensões da imagem');
+        throw new BadRequestException(
+          'Não foi possível obter dimensões da imagem',
+        );
       }
       if (dimensions.width !== 128 || dimensions.height !== 128) {
         throw new BadRequestException(

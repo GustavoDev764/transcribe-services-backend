@@ -47,22 +47,17 @@ export interface IEnvConfig {
 
   TRANSCRIBE_HOST: string;
 
-  /** amqp://... — fila Whisper/Nest (também aceita WHISPER_RABBITMQ_URL no .env por compatibilidade) */
   RABBITMQ_URL: string;
 
   WHISPER_JOBS_QUEUE: string;
 
   WHISPER_STATUS_QUEUE: string;
 
-  /** Diretório montado igual no container do worker Whisper (caminho absoluto) */
   TRANSCRIPTION_SHARED_STORAGE_PATH: string;
 
-  /** Base pública da API (ex.: http://host.docker.internal:3000) — download assinado para o worker */
   PUBLIC_APP_URL: string;
 
-  /** Segredo HMAC para URL de download do áudio (worker usa a URL; não precisa deste segredo) */
   WHISPER_MQ_DOWNLOAD_SECRET: string;
 
-  /** TTL da URL assinada em segundos (padrão 3600) */
   WHISPER_MQ_DOWNLOAD_TTL_SEC: number;
 }

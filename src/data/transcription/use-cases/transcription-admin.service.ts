@@ -135,31 +135,15 @@ export class TranscriptionAdminService {
     return this.iaCategoryRepo.list();
   }
 
-  createIaCategory(dto: {
-    name: string;
-    tipo?: IaCategoryKind;
-  }) {
+  createIaCategory(dto: { name: string; tipo?: IaCategoryKind }) {
     const tipo = dto.tipo ?? IaCategoryKind.TEXT_GENERATION;
-    if (tipo === IaCategoryKind.AUDIO_AND_SPEECH) {
-      throw new BadRequestException(
-        'O tipo "Áudio e fala" (audio_and_speech) estará disponível em breve.',
-      );
-    }
     return this.iaCategoryRepo.create({
       name: dto.name,
       tipo,
     });
   }
 
-  updateIaCategory(
-    id: string,
-    dto: { name?: string; tipo?: IaCategoryKind },
-  ) {
-    if (dto.tipo === IaCategoryKind.AUDIO_AND_SPEECH) {
-      throw new BadRequestException(
-        'O tipo "Áudio e fala" (audio_and_speech) estará disponível em breve.',
-      );
-    }
+  updateIaCategory(id: string, dto: { name?: string; tipo?: IaCategoryKind }) {
     if (dto.name === undefined && dto.tipo === undefined) {
       throw new BadRequestException('Informe ao menos um campo para atualizar');
     }

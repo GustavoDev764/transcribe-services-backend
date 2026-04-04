@@ -7,9 +7,9 @@ export type WhisperMqJobPayload = {
   job_id: string;
   model: string;
   original_filename: string;
-  /** Modo volume compartilhado */
+
   file_path?: string;
-  /** Modo HTTP — URL assinada do Nest */
+
   file_url?: string;
 };
 
@@ -39,7 +39,9 @@ export class WhisperMqPublisherService {
       return true;
     } catch (e) {
       const err = e as Error;
-      this.logger.error(`Falha ao publicar job na fila Whisper: ${err.message}`);
+      this.logger.error(
+        `Falha ao publicar job na fila Whisper: ${err.message}`,
+      );
       return false;
     } finally {
       if (connection) {

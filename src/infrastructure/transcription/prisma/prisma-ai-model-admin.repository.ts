@@ -99,7 +99,9 @@ export class PrismaAiModelAdminRepository implements AiModelAdminRepository {
         ...(data.name !== undefined && { name: data.name }),
         ...(data.modelName !== undefined && { modelName: data.modelName }),
         ...(data.subtitle !== undefined && { subtitle: data.subtitle }),
-        ...(data.textTooltip !== undefined && { textTooltip: data.textTooltip }),
+        ...(data.textTooltip !== undefined && {
+          textTooltip: data.textTooltip,
+        }),
         ...(data.urlIcone !== undefined && { urlIcone: data.urlIcone }),
         ...(data.iconFileName !== undefined && {
           iconFileName: data.iconFileName,

@@ -20,6 +20,10 @@ import type {
 import { TranscriptionStatus } from '@app/domain/transcription/value-objects/transcription-status';
 import { FileService } from '@app/data/file/use-cases/file.service';
 import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
+import {
+  buildCanonicalTranscriptionResponses,
+  canonicalSegmentsToSrt,
+} from '@app/domain/transcription/services/canonical-transcription-responses';
 
 type WhisperStatusPayload = {
   job_id: string;
@@ -111,7 +115,6 @@ export class WhisperMqConsumerService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** `responses` do job = apenas o objeto de status RabbitMQ (sem chave `whisperMq`). */
   private whisperResponsesPayload(
     block: Record<string, unknown>,
   ): Record<string, unknown> {
@@ -121,7 +124,11 @@ export class WhisperMqConsumerService implements OnModuleInit, OnModuleDestroy {
   private readPreviousWhisperState(
     responses: unknown,
   ): Record<string, unknown> | null {
-    if (!responses || typeof responses !== 'object' || Array.isArray(responses)) {
+    if (
+      !responses ||
+      typeof responses !== 'object' ||
+      Array.isArray(responses)
+    ) {
       return null;
     }
     const r = responses as Record<string, unknown>;
@@ -159,8 +166,7 @@ export class WhisperMqConsumerService implements OnModuleInit, OnModuleDestroy {
     },
   ): Record<string, unknown> {
     const err = opts.error?.trim();
-    const concludedFailed =
-      payload.status === 'concluded' && Boolean(err);
+    const concludedFailed = payload.status === 'concluded' && Boolean(err);
     const langFromPayload =
       payload.language != null && String(payload.language).trim() !== ''
         ? String(payload.language).trim()
@@ -267,12 +273,16 @@ export class WhisperMqConsumerService implements OnModuleInit, OnModuleDestroy {
         segments: [],
         error: errMsg,
       });
-      await this.jobRepository.updateStatus(job.id, TranscriptionStatus.FAILED, {
-        responses: this.whisperResponsesPayload(failedBlock),
-        errorMessage: errMsg,
-        finishedAt: new Date(),
-        lastStatusCheckAt: new Date(),
-      });
+      await this.jobRepository.updateStatus(
+        job.id,
+        TranscriptionStatus.FAILED,
+        {
+          responses: this.whisperResponsesPayload(failedBlock),
+          errorMessage: errMsg,
+          finishedAt: new Date(),
+          lastStatusCheckAt: new Date(),
+        },
+      );
       if (job.fileId) {
         await this.fileService.updateTranscriptionStatus(
           job.fileId,
@@ -305,19 +315,31 @@ export class WhisperMqConsumerService implements OnModuleInit, OnModuleDestroy {
       end: number;
       text: string;
     }>;
-    const srt =
-      segmentsForSrt.length > 0
-        ? this.segmentsToSrt(segmentsForSrt)
-        : this.singleSegmentSrt(text);
-
     const doneBlock = this.buildWhisperMqBlock(job, payload, {
       text_content: (payload.text_content ?? '').trim() || text,
       segments: segmentsRaw,
     });
 
+    let canonical = buildCanonicalTranscriptionResponses(doneBlock);
+    const segs = canonical.segments as Record<string, unknown>[];
+    const fromCanon = canonicalSegmentsToSrt(Array.isArray(segs) ? segs : []);
+    const srtFallback =
+      segmentsForSrt.length > 0
+        ? this.segmentsToSrt(segmentsForSrt)
+        : this.singleSegmentSrt(text);
+    if (!fromCanon.trim() && srtFallback.trim()) {
+      const plain =
+        (typeof canonical.text === 'string' && canonical.text.trim()) || text;
+      const t = plain || srtFallback;
+      canonical = {
+        ...canonical,
+        text: t,
+        segments: [{ id: 0, start: 0, end: 0, text: t }],
+      };
+    }
+
     await this.jobRepository.updateStatus(job.id, TranscriptionStatus.SUCCESS, {
-      responses: this.whisperResponsesPayload(doneBlock),
-      resultText: srt,
+      responses: canonical,
       resultUrl: `/transcriptions/${job.id}/result`,
       finishedAt: new Date(),
       lastStatusCheckAt: new Date(),

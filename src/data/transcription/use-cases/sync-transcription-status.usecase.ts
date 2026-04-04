@@ -13,6 +13,10 @@ import type {
 import { TranscriptionStatus } from '@app/domain/transcription/value-objects/transcription-status';
 import { TranscriptionProviderError } from '@app/protocols/transcription/providers/ai-provider';
 import { ProviderName } from '@app/domain/transcription/value-objects/provider-name';
+import {
+  buildCanonicalTranscriptionResponses,
+  canonicalSegmentsToSrt,
+} from '@app/domain/transcription/services/canonical-transcription-responses';
 
 @Injectable()
 export class SyncTranscriptionStatusUseCase {
@@ -29,7 +33,11 @@ export class SyncTranscriptionStatusUseCase {
   ) {}
 
   private isWhisperRabbitJob(responses: unknown): boolean {
-    if (!responses || typeof responses !== 'object' || Array.isArray(responses)) {
+    if (
+      !responses ||
+      typeof responses !== 'object' ||
+      Array.isArray(responses)
+    ) {
       return false;
     }
     const r = responses as Record<string, unknown>;
@@ -110,12 +118,28 @@ export class SyncTranscriptionStatusUseCase {
       }
 
       if (status.status === 'completed') {
+        let canonical = buildCanonicalTranscriptionResponses(
+          status.rawResponse ?? null,
+        );
+        const segs = canonical.segments as Record<string, unknown>[];
+        const fromCanon = canonicalSegmentsToSrt(
+          Array.isArray(segs) ? segs : [],
+        );
+        const fb = status.srtContent?.trim() ?? '';
+        if (!fromCanon.trim() && fb) {
+          const t =
+            (typeof canonical.text === 'string' && canonical.text.trim()) || fb;
+          canonical = {
+            ...canonical,
+            text: t,
+            segments: [{ id: 0, start: 0, end: 0, text: t }],
+          };
+        }
         await this.jobRepository.updateStatus(
           job.id,
           TranscriptionStatus.SUCCESS,
           {
-            responses: status.rawResponse ?? null,
-            resultText: status.srtContent ?? null,
+            responses: canonical,
             resultUrl: `/transcriptions/${job.id}/result`,
             finishedAt: new Date(),
             lastStatusCheckAt: new Date(),

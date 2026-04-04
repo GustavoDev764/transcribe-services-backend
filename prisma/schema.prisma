@@ -120,7 +120,7 @@ model SystemConfig {
 
 enum ProviderName {
   OPENAI
-  GOOGLE
+  ELEVENLABS
   TRANSCRIBE_SERVICES
 }
 
@@ -213,11 +213,12 @@ model TranscriptionJob {
   provider          String?                    @map("provider")
   externalJobId     String?                    @map("job_id")
   preferredModel    String?                    @map("preferred_model")
+  diarizeEnabled    Boolean                    @default(false) @map("diarize_enabled")
+  diarizeSpeakerCount Int?                     @map("diarize_speaker_count")
   status            TranscriptionStatus        @default(PENDING)
   providerAttempts  Json?                      @map("provider_attempts")
   responses         Json?                      @map("responses")
   resultUrl         String?                    @map("result_url")
-  resultText        String?                    @map("result_text")
   errorMessage      String?                    @map("error_message")
   attempts          Int                        @default(0) @map("attempts")
   lastStatusCheckAt DateTime?                  @map("last_status_check_at")

@@ -23,9 +23,7 @@ export const multerAiModelIconConfig = {
       return;
     }
     cb(
-      new Error(
-        'Formato inválido. Use PNG, JPEG, WebP (128x128 px) ou SVG.',
-      ),
+      new Error('Formato inválido. Use PNG, JPEG, WebP (128x128 px) ou SVG.'),
       false,
     );
   },
