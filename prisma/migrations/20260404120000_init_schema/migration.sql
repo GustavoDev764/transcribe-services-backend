@@ -1,5 +1,6 @@
--- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
+DROP SCHEMA IF EXISTS public CASCADE;
+CREATE SCHEMA public;
+GRANT ALL ON SCHEMA public TO PUBLIC;
 
 -- CreateEnum
 CREATE TYPE "UserProfile" AS ENUM ('CLIENT', 'MANAGER');
